@@ -54,6 +54,11 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 .tp-crumb strong{color:var(--ink);font-weight:700;}
 .tp-credit{font-size:11px;color:var(--muted-light);font-weight:500;}
 .tp-credit span{color:var(--teal-dark);font-weight:700;}
+.tp-lanark-logo{display:flex;align-items:center;text-decoration:none;opacity:0.85;transition:opacity .15s;}
+.tp-lanark-logo:hover{opacity:1;}
+.page-credit{position:fixed;bottom:16px;right:20px;font-size:11px;color:var(--muted-light);font-weight:500;z-index:200;}
+.page-credit a{color:#4A7CC7;text-decoration:none;font-weight:700;}
+.page-credit a:hover{color:#1B4F9B;text-decoration:underline;}
 
 /* CONTENT */
 .content{padding:30px 36px;max-width:860px;width:100%;}
@@ -181,8 +186,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
       <div class="step-row"><div class="step-n">3</div>Download result</div>
     </div>
     <div class="sb-credit">
-      Built by <a href="https://lanark.be" target="_blank">Lanark</a><br>
-      for Edgard &amp; Cooper &middot; Internal use only
+      Edgard &amp; Cooper &middot; Internal use only
     </div>
   </div>
 </aside>
@@ -193,7 +197,32 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
       <div class="tp-pill">E&amp;C Internal</div>
       <div class="tp-crumb">Script Hub &rsaquo; <strong id="topbar-current">Launch Check</strong></div>
     </div>
-    <div class="tp-credit">Built by <span>Lanark</span></div>
+    <!-- Lanark logo: pixel icon + wordmark + tagline -->
+    <a href="https://lanark.be" target="_blank" class="tp-lanark-logo" title="Built by Lanark">
+      <svg width="130" height="34" viewBox="0 0 130 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pixel grid icon (3x3 with gaps, top-left and bottom-right missing = L shape) -->
+        <rect x="0"  y="0"  width="9" height="9" rx="1.5" fill="#1B4F9B"/>
+        <rect x="11" y="0"  width="9" height="9" rx="1.5" fill="#1B4F9B"/>
+        <rect x="0"  y="11" width="9" height="9" rx="1.5" fill="#4A7CC7"/>
+        <rect x="11" y="11" width="9" height="9" rx="1.5" fill="#1B4F9B"/>
+        <rect x="0"  y="22" width="9" height="9" rx="1.5" fill="#7AAAD8"/>
+        <rect x="11" y="22" width="9" height="9" rx="1.5" fill="#4A7CC7"/>
+        <!-- LANARK wordmark -->
+        <text x="26" y="17"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="17"
+          font-weight="800"
+          letter-spacing="1.5"
+          fill="#1B4F9B">LANARK</text>
+        <!-- Digital Supply Chain Engineers -->
+        <text x="26" y="29"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="7"
+          font-weight="500"
+          letter-spacing="1.2"
+          fill="#4A7CC7">DIGITAL SUPPLY CHAIN ENGINEERS</text>
+      </svg>
+    </a>
   </div>
 
   <!-- LAUNCH CHECK -->
@@ -325,5 +354,8 @@ async function runGarvisExport(){
   finally{setBtn('btn-garvis',false,'&#9654;&nbsp; Build overview');}
 }
 </script>
+<!-- Bottom-right credit -->
+<div class="page-credit">Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
+
 </body>
 </html>
