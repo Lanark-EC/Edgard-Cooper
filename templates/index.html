@@ -21,7 +21,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 
 /* SIDEBAR */
 .sidebar{width:var(--sb-w);background:var(--teal-sb);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
-.sb-brand{background:var(--teal-deeper);padding:18px 18px 0;position:relative;overflow:hidden;min-height:140px;}
+.sb-brand{background:var(--teal-deeper);padding:18px 18px 14px;position:relative;overflow:hidden;}
 .sb-brand::before{content:'';position:absolute;top:-22px;right:-22px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.06);}
 .sb-top{display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:2;}
 .sb-sub{font-size:10px;color:rgba(255,255,255,0.4);font-weight:500;position:relative;z-index:2;padding-bottom:16px;margin-top:5px;letter-spacing:.02em;}
@@ -60,8 +60,10 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 .page-credit a{color:#4A7CC7;text-decoration:none;font-weight:700;}
 .page-credit a:hover{color:#1B4F9B;text-decoration:underline;}
 
+/* PET BACKGROUND */
+.pet-bg{position:fixed;bottom:0;right:0;width:700px;height:600px;object-fit:contain;object-position:bottom right;pointer-events:none;z-index:0;opacity:0.15;}
 /* CONTENT */
-.content{padding:30px 36px;max-width:860px;width:100%;}
+.content{padding:30px 36px;max-width:860px;width:100%;position:relative;z-index:1;}
 .page-hero{background:linear-gradient(130deg,var(--teal-deeper) 0%,var(--teal-dark) 55%,var(--teal) 100%);border-radius:var(--r);padding:22px 26px;margin-bottom:20px;position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;}
 .page-hero::before{content:'';position:absolute;top:-32px;right:-32px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.06);}
 .page-hero::after{content:'';position:absolute;bottom:-18px;right:80px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.04);}
@@ -123,39 +125,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 <aside class="sidebar">
   <div class="sb-brand">
     <div class="sb-top">
-      <!-- E&C logo: bubbly rounded style matching brand -->
-      <svg width="120" height="62" viewBox="0 0 120 62" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- "edgard" — large rounded weight, slight left lean like the real logo -->
-        <text x="4" y="28"
-          font-family="Nunito, sans-serif"
-          font-size="26"
-          font-weight="900"
-          letter-spacing="-0.5"
-          fill="white">edgard</text>
-        <!-- "Cooper." — capital C, same bubbly weight -->
-        <text x="4" y="56"
-          font-family="Nunito, sans-serif"
-          font-size="26"
-          font-weight="900"
-          letter-spacing="-0.5"
-          fill="white">Cooper.</text>
-      </svg>
-      <!-- Minimal flat dog -->
-      <svg width="54" height="60" viewBox="0 0 54 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="27" cy="43" rx="15" ry="13" fill="rgba(255,255,255,0.16)"/>
-        <circle cx="27" cy="23" r="12" fill="rgba(255,255,255,0.16)"/>
-        <ellipse cx="17" cy="14" rx="4.5" ry="7.5" fill="rgba(255,255,255,0.2)" transform="rotate(-14 17 14)"/>
-        <ellipse cx="37" cy="14" rx="4.5" ry="7.5" fill="rgba(255,255,255,0.2)" transform="rotate(14 37 14)"/>
-        <circle cx="23" cy="21" r="1.8" fill="rgba(255,255,255,0.65)"/>
-        <circle cx="31" cy="21" r="1.8" fill="rgba(255,255,255,0.65)"/>
-        <circle cx="23.6" cy="20.4" r="0.75" fill="rgba(30,112,112,0.9)"/>
-        <circle cx="31.6" cy="20.4" r="0.75" fill="rgba(30,112,112,0.9)"/>
-        <ellipse cx="27" cy="26" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.5)"/>
-        <path d="M23.5 28.5 Q27 31.5 30.5 28.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-        <path d="M42 38 Q50 30 47 24" stroke="rgba(255,255,255,0.18)" stroke-width="5" stroke-linecap="round" fill="none"/>
-        <rect x="18" y="52" width="5.5" height="7" rx="2.7" fill="rgba(255,255,255,0.14)"/>
-        <rect x="30.5" y="52" width="5.5" height="7" rx="2.7" fill="rgba(255,255,255,0.14)"/>
-      </svg>
+      <img src="/static/EC.png" alt="Edgard & Cooper" style="width:150px;object-fit:contain;">
     </div>
     <div class="sb-sub">Internal automation tools</div>
   </div>
@@ -197,31 +167,12 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
       <div class="tp-pill">E&amp;C Internal</div>
       <div class="tp-crumb">Script Hub &rsaquo; <strong id="topbar-current">Launch Check</strong></div>
     </div>
-    <!-- Lanark logo: pixel icon + wordmark + tagline -->
+    <!-- Lanark wordmark -->
     <a href="https://lanark.be" target="_blank" class="tp-lanark-logo" title="Built by Lanark">
-      <svg width="130" height="34" viewBox="0 0 130 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Pixel grid icon (3x3 with gaps, top-left and bottom-right missing = L shape) -->
-        <rect x="0"  y="0"  width="9" height="9" rx="1.5" fill="#1B4F9B"/>
-        <rect x="11" y="0"  width="9" height="9" rx="1.5" fill="#1B4F9B"/>
-        <rect x="0"  y="11" width="9" height="9" rx="1.5" fill="#4A7CC7"/>
-        <rect x="11" y="11" width="9" height="9" rx="1.5" fill="#1B4F9B"/>
-        <rect x="0"  y="22" width="9" height="9" rx="1.5" fill="#7AAAD8"/>
-        <rect x="11" y="22" width="9" height="9" rx="1.5" fill="#4A7CC7"/>
-        <!-- LANARK wordmark -->
-        <text x="26" y="17"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="17"
-          font-weight="800"
-          letter-spacing="1.5"
-          fill="#1B4F9B">LANARK</text>
-        <!-- Digital Supply Chain Engineers -->
-        <text x="26" y="29"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="7"
-          font-weight="500"
-          letter-spacing="1.2"
-          fill="#4A7CC7">DIGITAL SUPPLY CHAIN ENGINEERS</text>
-      </svg>
+      <div style="display:flex;flex-direction:column;line-height:1.2;">
+        <span style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:800;letter-spacing:2px;color:#1B4F9B;">LANARK</span>
+        <span style="font-family:Arial,Helvetica,sans-serif;font-size:7px;font-weight:500;letter-spacing:0.8px;color:#4A7CC7;white-space:nowrap;">DIGITAL SUPPLY CHAIN ENGINEERS</span>
+      </div>
     </a>
   </div>
 
@@ -356,6 +307,202 @@ async function runGarvisExport(){
 </script>
 <!-- Bottom-right credit -->
 <div class="page-credit">Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
+
+<!-- Pet background illustration -->
+<img class="pet-bg" src="/static/pets.png" alt="">
+<svg class="pet-bg" viewBox="0 0 700 600" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
+
+  <!-- ── DALMATIAN (back left, jumping) ── -->
+  <g transform="translate(60, 20)">
+    <!-- body -->
+    <ellipse cx="80" cy="230" rx="48" ry="62" fill="#D4C5B0"/>
+    <!-- head -->
+    <circle cx="110" cy="150" r="42" fill="#D4C5B0"/>
+    <!-- ear left -->
+    <ellipse cx="76" cy="128" rx="14" ry="22" fill="#B8A898" transform="rotate(-20 76 128)"/>
+    <!-- ear right -->
+    <ellipse cx="144" cy="122" rx="13" ry="20" fill="#B8A898" transform="rotate(15 144 122)"/>
+    <!-- spots -->
+    <ellipse cx="100" cy="155" rx="8" ry="6" fill="#7A6A5A" opacity=".7"/>
+    <ellipse cx="125" cy="138" rx="5" ry="4" fill="#7A6A5A" opacity=".7"/>
+    <ellipse cx="95" cy="175" rx="6" ry="5" fill="#7A6A5A" opacity=".6"/>
+    <ellipse cx="60" cy="210" rx="7" ry="6" fill="#7A6A5A" opacity=".6"/>
+    <ellipse cx="90" cy="240" rx="9" ry="7" fill="#7A6A5A" opacity=".6"/>
+    <!-- eyes -->
+    <circle cx="98" cy="145" r="5" fill="#5A4A3A"/>
+    <circle cx="122" cy="143" r="5" fill="#5A4A3A"/>
+    <circle cx="99.5" cy="143.5" r="1.8" fill="white"/>
+    <circle cx="123.5" cy="141.5" r="1.8" fill="white"/>
+    <!-- nose -->
+    <ellipse cx="110" cy="160" rx="7" ry="5" fill="#5A4A3A"/>
+    <!-- tongue -->
+    <path d="M105 168 Q110 176 115 168" stroke="#C08080" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- front legs raised up -->
+    <rect x="42" y="180" width="22" height="55" rx="11" fill="#D4C5B0" transform="rotate(-35 42 180)"/>
+    <rect x="108" y="178" width="22" height="55" rx="11" fill="#D4C5B0" transform="rotate(25 108 178)"/>
+    <!-- back legs -->
+    <rect x="48" y="268" width="22" height="50" rx="11" fill="#C8B8A4"/>
+    <rect x="90" y="272" width="22" height="48" rx="11" fill="#C8B8A4"/>
+    <!-- tail -->
+    <path d="M128 230 Q160 190 155 160" stroke="#D4C5B0" stroke-width="14" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- ── FRENCH BULLDOG (front left) ── -->
+  <g transform="translate(0, 180)">
+    <!-- body -->
+    <ellipse cx="100" cy="270" rx="58" ry="68" fill="#C8A878"/>
+    <!-- head -->
+    <circle cx="100" cy="175" r="52" fill="#C8A878"/>
+    <!-- flat ears -->
+    <ellipse cx="56" cy="140" rx="20" ry="24" fill="#A88858" transform="rotate(-10 56 140)"/>
+    <ellipse cx="144" cy="138" rx="20" ry="24" fill="#A88858" transform="rotate(10 144 138)"/>
+    <!-- wrinkle forehead -->
+    <path d="M80 160 Q100 155 120 160" stroke="#A88858" stroke-width="2.5" fill="none"/>
+    <!-- eyes -->
+    <circle cx="84" cy="168" r="8" fill="#3A2A1A"/>
+    <circle cx="116" cy="168" r="8" fill="#3A2A1A"/>
+    <circle cx="86" cy="166" r="2.5" fill="white"/>
+    <circle cx="118" cy="166" r="2.5" fill="white"/>
+    <!-- flat nose -->
+    <rect x="88" y="184" width="24" height="14" rx="7" fill="#5A3A1A"/>
+    <circle cx="94" cy="189" r="3" fill="#3A2010"/>
+    <circle cx="106" cy="189" r="3" fill="#3A2010"/>
+    <!-- mouth -->
+    <path d="M90 198 Q100 205 110 198" stroke="#A87848" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- front paws -->
+    <rect x="58" y="318" width="28" height="38" rx="14" fill="#B89868"/>
+    <rect x="114" y="318" width="28" height="38" rx="14" fill="#B89868"/>
+    <!-- paw toes -->
+    <path d="M62 320 Q72 316 80 320" stroke="#A88858" stroke-width="1.5" fill="none"/>
+    <path d="M118 320 Q128 316 136 320" stroke="#A88858" stroke-width="1.5" fill="none"/>
+  </g>
+
+  <!-- ── GOLDEN COCKER SPANIEL (centre) ── -->
+  <g transform="translate(190, 100)">
+    <!-- fluffy body -->
+    <ellipse cx="110" cy="310" rx="75" ry="88" fill="#C8924A"/>
+    <!-- fur texture body -->
+    <ellipse cx="80" cy="280" rx="20" ry="35" fill="#B88040" opacity=".5"/>
+    <ellipse cx="140" cy="280" rx="20" ry="35" fill="#B88040" opacity=".5"/>
+    <!-- head -->
+    <circle cx="110" cy="195" r="58" fill="#C8924A"/>
+    <!-- long floppy ears -->
+    <ellipse cx="52" cy="210" rx="22" ry="55" fill="#A87030" transform="rotate(-8 52 210)"/>
+    <ellipse cx="168" cy="208" rx="22" ry="55" fill="#A87030" transform="rotate(8 168 208)"/>
+    <!-- fur on head -->
+    <ellipse cx="110" cy="165" rx="35" ry="20" fill="#D8A050" opacity=".6"/>
+    <!-- eyes closed/happy -->
+    <path d="M88 190 Q96 183 104 190" stroke="#3A2010" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M116 190 Q124 183 132 190" stroke="#3A2010" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <!-- rosy cheeks -->
+    <ellipse cx="78" cy="205" rx="12" ry="8" fill="#E09878" opacity=".4"/>
+    <ellipse cx="142" cy="205" rx="12" ry="8" fill="#E09878" opacity=".4"/>
+    <!-- nose -->
+    <ellipse cx="110" cy="210" rx="10" ry="7" fill="#7A4820"/>
+    <!-- mouth happy -->
+    <path d="M96 220 Q110 232 124 220" stroke="#7A4820" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- front paws -->
+    <ellipse cx="78" cy="388" rx="22" ry="16" fill="#B88040"/>
+    <ellipse cx="142" cy="388" rx="22" ry="16" fill="#B88040"/>
+    <!-- tail -->
+    <path d="M185 340 Q215 300 205 265" stroke="#C8924A" stroke-width="18" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- ── TABBY CAT (right of centre) ── -->
+  <g transform="translate(380, 150)">
+    <!-- body -->
+    <ellipse cx="90" cy="300" rx="62" ry="78" fill="#B0A890"/>
+    <!-- belly -->
+    <ellipse cx="90" cy="310" rx="38" ry="52" fill="#D8D0B8"/>
+    <!-- head -->
+    <ellipse cx="90" cy="185" rx="52" ry="48" fill="#B0A890"/>
+    <!-- pointy ears -->
+    <polygon points="44,148 58,108 76,150" fill="#B0A890"/>
+    <polygon points="48,148 60,116 74,150" fill="#D8A090" opacity=".6"/>
+    <polygon points="104,150 122,108 136,148" fill="#B0A890"/>
+    <polygon points="106,150 120,116 134,148" fill="#D8A090" opacity=".6"/>
+    <!-- tabby stripes -->
+    <path d="M60 170 Q90 165 120 170" stroke="#8A8070" stroke-width="2" fill="none" opacity=".6"/>
+    <path d="M55 185 Q90 180 125 185" stroke="#8A8070" stroke-width="2" fill="none" opacity=".5"/>
+    <!-- eyes -->
+    <ellipse cx="74" cy="182" rx="9" ry="10" fill="#7A9850"/>
+    <ellipse cx="106" cy="182" rx="9" ry="10" fill="#7A9850"/>
+    <ellipse cx="74" cy="182" rx="4" ry="8" fill="#1A1208"/>
+    <ellipse cx="106" cy="182" rx="4" ry="8" fill="#1A1208"/>
+    <circle cx="71" cy="179" r="2" fill="white"/>
+    <circle cx="103" cy="179" r="2" fill="white"/>
+    <!-- nose -->
+    <polygon points="86,198 90,194 94,198 90,203" fill="#D89898"/>
+    <!-- whiskers -->
+    <line x1="28" y1="200" x2="72" y2="203" stroke="#8A8070" stroke-width="1.2" opacity=".7"/>
+    <line x1="28" y1="207" x2="72" y2="207" stroke="#8A8070" stroke-width="1.2" opacity=".7"/>
+    <line x1="108" y1="203" x2="152" y2="200" stroke="#8A8070" stroke-width="1.2" opacity=".7"/>
+    <line x1="108" y1="207" x2="152" y2="207" stroke="#8A8070" stroke-width="1.2" opacity=".7"/>
+    <!-- mouth -->
+    <path d="M86 203 Q90 208 94 203" stroke="#C08080" stroke-width="1.8" fill="none"/>
+    <!-- paws on ledge -->
+    <ellipse cx="60" cy="368" rx="20" ry="13" fill="#A8A088"/>
+    <ellipse cx="120" cy="368" rx="20" ry="13" fill="#A8A088"/>
+    <!-- tail curling -->
+    <path d="M152 340 Q185 310 178 270 Q172 240 155 250" stroke="#B0A890" stroke-width="14" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- ── CHOCOLATE PUPPY (far right, sitting) ── -->
+  <g transform="translate(530, 200)">
+    <!-- body -->
+    <ellipse cx="85" cy="295" rx="55" ry="65" fill="#7A4828"/>
+    <!-- tummy -->
+    <ellipse cx="85" cy="305" rx="32" ry="42" fill="#A06840"/>
+    <!-- head -->
+    <circle cx="85" cy="195" r="50" fill="#7A4828"/>
+    <!-- floppy ears -->
+    <ellipse cx="38" cy="208" rx="18" ry="42" fill="#5A3018" transform="rotate(-6 38 208)"/>
+    <ellipse cx="132" cy="206" rx="18" ry="42" fill="#5A3018" transform="rotate(6 132 206)"/>
+    <!-- eyes big puppy -->
+    <circle cx="70" cy="188" r="10" fill="#1A0C04"/>
+    <circle cx="100" cy="188" r="10" fill="#1A0C04"/>
+    <circle cx="67" cy="185" r="3" fill="white"/>
+    <circle cx="97" cy="185" r="3" fill="white"/>
+    <!-- eyebrow dots -->
+    <circle cx="70" cy="175" r="3" fill="#5A3018"/>
+    <circle cx="100" cy="175" r="3" fill="#5A3018"/>
+    <!-- nose -->
+    <ellipse cx="85" cy="208" rx="9" ry="6" fill="#2A1408"/>
+    <!-- mouth -->
+    <path d="M76 216 Q85 224 94 216" stroke="#5A3018" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- front paws -->
+    <ellipse cx="58" cy="352" rx="20" ry="14" fill="#6A3818"/>
+    <ellipse cx="112" cy="352" rx="20" ry="14" fill="#6A3818"/>
+  </g>
+
+  <!-- ── TINY PUPPY (front right, small) ── -->
+  <g transform="translate(590, 370)">
+    <!-- body -->
+    <ellipse cx="50" cy="140" rx="35" ry="42" fill="#8A5830"/>
+    <!-- head -->
+    <circle cx="50" cy="88" r="34" fill="#8A5830"/>
+    <!-- ears -->
+    <ellipse cx="24" cy="76" rx="12" ry="22" fill="#6A3E18" transform="rotate(-10 24 76)"/>
+    <ellipse cx="76" cy="74" rx="12" ry="22" fill="#6A3E18" transform="rotate(10 76 74)"/>
+    <!-- eyes -->
+    <circle cx="40" cy="84" r="7" fill="#180800"/>
+    <circle cx="60" cy="84" r="7" fill="#180800"/>
+    <circle cx="38" cy="82" r="2" fill="white"/>
+    <circle cx="58" cy="82" r="2" fill="white"/>
+    <!-- nose -->
+    <ellipse cx="50" cy="96" rx="6" ry="4" fill="#180800"/>
+    <!-- mouth -->
+    <path d="M44 101 Q50 106 56 101" stroke="#6A3E18" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- paws -->
+    <ellipse cx="32" cy="175" rx="14" ry="10" fill="#7A4820"/>
+    <ellipse cx="68" cy="175" rx="14" ry="10" fill="#7A4820"/>
+    <!-- tail -->
+    <path d="M85 148 Q105 130 100 110" stroke="#8A5830" stroke-width="10" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Ground line -->
+  <line x1="0" y1="595" x2="700" y2="595" stroke="#C8B8A0" stroke-width="2" opacity=".3"/>
+</svg>
 
 </body>
 </html>
