@@ -1,760 +1,328 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>E&C Script Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,700;0,800;0,900;1,800&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --teal:         #00A79D;
-    --teal-dark:    #007D75;
-    --teal-deeper:  #005E57;
-    --teal-light:   #E0F5F4;
-    --teal-mid:     #B2E5E2;
-    --cream:        #FAF7F2;
-    --cream-dark:   #F0EBE1;
-    --warm-white:   #FFFFFF;
-    --ink:          #1A2B2A;
-    --ink-soft:     #2E4140;
-    --muted:        #6B8584;
-    --muted-light:  #A8BFBE;
-    --border:       #D6EDEB;
-    --border-strong:#9DCFCC;
-    --error:        #C0392B;
-    --error-bg:     #FDECEA;
-    --sidebar-w:    280px;
-    --radius:       16px;
-    --radius-sm:    10px;
-  }
-
-  body {
-    font-family: 'Nunito Sans', sans-serif;
-    background: var(--cream);
-    color: var(--ink);
-    display: flex;
-    min-height: 100vh;
-    font-size: 14px;
-  }
-
-  /* ── SIDEBAR ───────────────────────────── */
-  .sidebar {
-    width: var(--sidebar-w);
-    background: var(--teal-deeper);
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    z-index: 100;
-    overflow-y: auto;
-  }
-
-  .sidebar-brand {
-    background: var(--teal-dark);
-    padding: 28px 24px 24px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .sidebar-brand::before {
-    content: '';
-    position: absolute;
-    top: -30px; right: -30px;
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-  }
-
-  .brand-logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 6px;
-    position: relative;
-    z-index: 1;
-  }
-
-  .brand-paw {
-    width: 40px; height: 40px;
-    background: var(--teal);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-
-  .brand-name {
-    font-family: 'Nunito', sans-serif;
-    font-size: 16px;
-    font-weight: 800;
-    color: #FFFFFF;
-    line-height: 1.15;
-  }
-
-  .brand-sub { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 500; }
-
-  .brand-tagline {
-    font-size: 11.5px;
-    color: rgba(255,255,255,0.4);
-    position: relative;
-    z-index: 1;
-  }
-
-  .sidebar-nav { flex: 1; padding: 20px 14px; }
-
-  .nav-section { margin-bottom: 24px; }
-
-  .nav-section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.28);
-    padding: 0 10px;
-    margin-bottom: 8px;
-  }
-
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 11px 12px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    color: rgba(255,255,255,0.6);
-    font-size: 13.5px;
-    font-weight: 600;
-    transition: all 0.18s;
-    margin-bottom: 3px;
-    border: none;
-    background: transparent;
-    width: 100%;
-    text-align: left;
-    font-family: 'Nunito', sans-serif;
-  }
-
-  .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
-
-  .nav-item.active {
-    background: var(--teal);
-    color: #FFFFFF;
-    box-shadow: 0 4px 16px rgba(0,167,157,0.35);
-  }
-
-  .nav-icon-wrap {
-    width: 30px; height: 30px;
-    border-radius: 7px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.07);
-    transition: background 0.18s;
-  }
-
-  .nav-item.active .nav-icon-wrap { background: rgba(255,255,255,0.2); }
-
-  .nav-meta {
-    margin-left: auto;
-    font-size: 10px;
-    font-weight: 700;
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.45);
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-family: 'Nunito Sans', sans-serif;
-  }
-
-  .nav-item.active .nav-meta { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
-
-  .sidebar-footer {
-    padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.07);
-  }
-
-  .sidebar-footer-inner {
-    background: rgba(0,0,0,0.18);
-    border-radius: var(--radius-sm);
-    padding: 13px 15px;
-  }
-
-  .footer-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 7px;
-  }
-
-  .footer-step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    font-weight: 500;
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-
-  .footer-step:last-child { margin-bottom: 0; }
-
-  .step-num {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: var(--teal);
-    color: white;
-    font-size: 10px;
-    font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-
-  /* ── MAIN ──────────────────────────────── */
-  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-
-  .topbar {
-    background: var(--warm-white);
-    border-bottom: 1px solid var(--border);
-    padding: 0 36px;
-    height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0; z-index: 50;
-    box-shadow: 0 1px 0 var(--border);
-  }
-
-  .topbar-left { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-
-  .topbar-pill {
-    background: var(--teal-light);
-    color: var(--teal-dark);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-  }
-
-  .topbar-crumb { color: var(--muted); display: flex; align-items: center; gap: 6px; font-weight: 500; }
-  .topbar-crumb strong { color: var(--ink); font-weight: 700; }
-  .topbar-avatar {
-    width: 32px; height: 32px;
-    background: var(--teal-light);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    border: 2px solid var(--teal-mid);
-  }
-
-  /* ── CONTENT ───────────────────────────── */
-  .content { padding: 36px 40px; max-width: 900px; width: 100%; }
-
-  /* Hero banner */
-  .page-hero {
-    background: linear-gradient(135deg, var(--teal-deeper) 0%, var(--teal-dark) 60%, var(--teal) 100%);
-    border-radius: var(--radius);
-    padding: 28px 32px;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .page-hero::before {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 180px; height: 180px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-  }
-
-  .page-hero::after {
-    content: '';
-    position: absolute;
-    bottom: -25px; right: 100px;
-    width: 90px; height: 90px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-  }
-
-  .hero-icon {
-    width: 54px; height: 54px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .hero-text { position: relative; z-index: 1; }
-
-  .hero-title {
-    font-family: 'Nunito', sans-serif;
-    font-size: 22px;
-    font-weight: 800;
-    color: #FFFFFF;
-    margin-bottom: 5px;
-  }
-
-  .hero-desc {
-    font-size: 13px;
-    color: rgba(255,255,255,0.68);
-    line-height: 1.55;
-    max-width: 500px;
-  }
-
-  /* Cards */
-  .card {
-    background: var(--warm-white);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 26px 28px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-
-  .card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    gap: 16px;
-  }
-
-  .card-title {
-    font-family: 'Nunito', sans-serif;
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--ink);
-    margin-bottom: 3px;
-  }
-
-  .card-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
-
-  .card-badge {
-    flex-shrink: 0;
-    background: var(--teal-light);
-    color: var(--teal-dark);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 20px;
-    white-space: nowrap;
-    border: 1px solid var(--border);
-  }
-
-  /* Upload */
-  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
-
-  .upload-field-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-
-  .upload-zone {
-    border: 2px dashed var(--border-strong);
-    border-radius: var(--radius-sm);
-    padding: 22px 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    background: var(--cream);
-  }
-
-  .upload-zone:hover { border-color: var(--teal); background: var(--teal-light); }
-  .upload-zone.has-file { border-color: var(--teal); border-style: solid; background: var(--teal-light); }
-
-  .upload-zone input[type="file"] {
-    position: absolute; inset: 0;
-    opacity: 0; cursor: pointer; width: 100%; height: 100%;
-  }
-
-  .upload-zone-icon {
-    font-size: 28px; margin-bottom: 8px; display: block;
-    transition: transform 0.2s;
-  }
-
-  .upload-zone:hover .upload-zone-icon,
-  .upload-zone.has-file .upload-zone-icon { transform: scale(1.1); }
-
-  .upload-zone-title {
-    font-family: 'Nunito', sans-serif;
-    font-size: 13px; font-weight: 700;
-    color: var(--ink-soft); margin-bottom: 3px;
-  }
-
-  .upload-zone-hint { font-size: 11.5px; color: var(--muted-light); font-weight: 500; }
-
-  .upload-filename {
-    font-size: 11.5px; color: var(--teal-dark); font-weight: 700;
-    margin-top: 6px; word-break: break-all; font-family: monospace;
-  }
-
-  .upload-single { margin-bottom: 22px; }
-  .upload-single .upload-zone { max-width: 360px; }
-
-  /* Buttons */
-  .btn-run {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--teal); color: #FFFFFF;
-    border: none; border-radius: var(--radius-sm);
-    padding: 13px 28px;
-    font-size: 14px; font-weight: 700;
-    font-family: 'Nunito', sans-serif;
-    cursor: pointer;
-    transition: all 0.18s;
-    box-shadow: 0 4px 14px rgba(0,167,157,0.35);
-  }
-
-  .btn-run:hover { background: var(--teal-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,167,157,0.4); }
-  .btn-run:active { transform: translateY(0); box-shadow: none; }
-  .btn-run:disabled { background: var(--muted-light); box-shadow: none; cursor: not-allowed; transform: none; }
-
-  .btn-download {
-    display: inline-flex; align-items: center; gap: 9px;
-    background: var(--warm-white); color: var(--teal-dark);
-    border: 2px solid var(--teal); border-radius: var(--radius-sm);
-    padding: 12px 24px; font-size: 13.5px; font-weight: 700;
-    font-family: 'Nunito', sans-serif;
-    cursor: pointer; text-decoration: none;
-    transition: all 0.18s; margin-top: 18px;
-    box-shadow: 0 2px 8px rgba(0,167,157,0.1);
-  }
-
-  .btn-download:hover { background: var(--teal); color: #FFFFFF; transform: translateY(-1px); }
-
-  /* Spinner */
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2.5px solid rgba(255,255,255,0.3);
-    border-top-color: #FFFFFF;
-    border-radius: 50%;
-    animation: spin 0.65s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Progress */
-  .progress-wrap { background: var(--cream-dark); border-radius: 20px; height: 5px; overflow: hidden; margin-bottom: 12px; }
-  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--teal), var(--teal-dark)); border-radius: 20px; animation: prog 2s ease-in-out infinite; }
-  @keyframes prog { 0%{width:5%;margin-left:0} 50%{width:55%;margin-left:20%} 100%{width:5%;margin-left:90%} }
-
-  /* Alerts */
-  .alert {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 18px; border-radius: var(--radius-sm);
-    font-size: 13.5px; line-height: 1.5;
-    border: 1px solid transparent; font-weight: 500;
-  }
-
-  .alert-success { background: var(--teal-light); color: var(--teal-deeper); border-color: var(--teal-mid); }
-  .alert-error { background: var(--error-bg); color: var(--error); border-color: #F5C6C2; }
-  .alert-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
-  .alert-title { font-family: 'Nunito', sans-serif; font-weight: 800; margin-bottom: 2px; font-size: 14px; }
-
-  /* Result card */
-  .result-card {
-    background: var(--warm-white);
-    border: 1px solid var(--border);
-    border-top: 3px solid var(--teal);
-    border-radius: var(--radius);
-    padding: 24px 28px;
-    margin-bottom: 16px;
-  }
-
-  .loading-card {
-    background: var(--warm-white);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px 28px;
-    margin-bottom: 16px;
-  }
-
-  .loading-title {
-    font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--teal-dark); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 9px;
-  }
-
-  .hidden { display: none !important; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal:#3BBFBF;--teal-dark:#2A9595;--teal-deeper:#1E7070;--teal-sb:#1A6060;
+  --teal-light:#E3F7F7;--teal-mid:#A8E0E0;
+  --cream:#FAF8F4;--cream-dark:#F0EDE6;--white:#FFFFFF;
+  --ink:#1A2B2B;--ink-soft:#2D4040;--muted:#5E7F7F;--muted-light:#9BBEBE;
+  --border:#D0EAEA;--border-mid:#A8D8D8;
+  --error:#C0392B;--error-bg:#FDECEA;
+  --sb-w:272px;--r:14px;--rs:9px;
+}
+body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--ink);display:flex;min-height:100vh;font-size:14px;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sb-w);background:var(--teal-sb);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sb-brand{background:var(--teal-deeper);padding:18px 18px 0;position:relative;overflow:hidden;min-height:140px;}
+.sb-brand::before{content:'';position:absolute;top:-22px;right:-22px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.06);}
+.sb-top{display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:2;}
+.sb-sub{font-size:10px;color:rgba(255,255,255,0.4);font-weight:500;position:relative;z-index:2;padding-bottom:16px;margin-top:5px;letter-spacing:.02em;}
+.sb-nav{flex:1;padding:16px 11px;}
+.nav-lbl{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,0.27);padding:0 8px;margin-bottom:6px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.58);font-size:13px;font-weight:700;transition:all .15s;margin-bottom:3px;border:none;background:transparent;width:100%;text-align:left;font-family:'Nunito',sans-serif;}
+.nav-item:hover:not(:disabled){background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.88);}
+.nav-item.active{background:var(--teal);color:#fff;box-shadow:0 3px 12px rgba(59,191,191,.35);}
+.nav-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(255,255,255,0.08);}
+.nav-item.active .nav-icon{background:rgba(255,255,255,0.18);}
+.nav-badge{margin-left:auto;font-size:9.5px;font-weight:700;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.36);padding:2px 7px;border-radius:20px;font-family:'Nunito Sans',sans-serif;}
+.nav-item.active .nav-badge{background:rgba(255,255,255,0.18);color:rgba(255,255,255,0.8);}
+.nav-sec{margin-bottom:20px;}
+.sb-footer{padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-steps{background:rgba(0,0,0,0.2);border-radius:8px;padding:11px 13px;margin-bottom:11px;}
+.steps-lbl{font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.26);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;}
+.step-row{display:flex;align-items:center;gap:7px;font-size:11.5px;color:rgba(255,255,255,0.43);font-weight:600;margin-bottom:5px;}
+.step-row:last-child{margin-bottom:0;}
+.step-n{width:17px;height:17px;border-radius:50%;background:var(--teal);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sb-credit{text-align:center;font-size:10px;color:rgba(255,255,255,0.2);line-height:1.6;font-weight:500;}
+.sb-credit a{color:rgba(255,255,255,0.38);text-decoration:none;font-weight:700;}
+.sb-credit a:hover{color:rgba(255,255,255,0.65);}
+
+/* MAIN */
+.main{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 34px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.tp-left{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+.tp-pill{background:var(--teal-light);color:var(--teal-deeper);font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px;}
+.tp-crumb{color:var(--muted);font-weight:500;display:flex;align-items:center;gap:5px;}
+.tp-crumb strong{color:var(--ink);font-weight:700;}
+.tp-credit{font-size:11px;color:var(--muted-light);font-weight:500;}
+.tp-credit span{color:var(--teal-dark);font-weight:700;}
+
+/* CONTENT */
+.content{padding:30px 36px;max-width:860px;width:100%;}
+.page-hero{background:linear-gradient(130deg,var(--teal-deeper) 0%,var(--teal-dark) 55%,var(--teal) 100%);border-radius:var(--r);padding:22px 26px;margin-bottom:20px;position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;}
+.page-hero::before{content:'';position:absolute;top:-32px;right:-32px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.06);}
+.page-hero::after{content:'';position:absolute;bottom:-18px;right:80px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.04);}
+.hero-icon{width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
+.hero-text{position:relative;z-index:1;}
+.hero-title{font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;}
+.hero-desc{font-size:12.5px;color:rgba(255,255,255,0.68);line-height:1.55;max-width:460px;}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:13px;box-shadow:0 2px 6px rgba(0,0,0,0.04);}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:13px;}
+.card-title{font-family:'Nunito',sans-serif;font-size:14.5px;font-weight:800;color:var(--ink);margin-bottom:2px;}
+.card-desc{font-size:12.5px;color:var(--muted);line-height:1.5;}
+.card-badge{flex-shrink:0;background:var(--teal-light);color:var(--teal-deeper);font-size:10.5px;font-weight:800;padding:3px 11px;border-radius:20px;border:1px solid var(--border);white-space:nowrap;}
+
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:18px;}
+.upload-lbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.upload-zone{border:2px dashed var(--border-mid);border-radius:9px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .18s;position:relative;background:var(--cream);}
+.upload-zone:hover{border-color:var(--teal);background:var(--teal-light);}
+.upload-zone.has-file{border-color:var(--teal);border-style:solid;background:var(--teal-light);}
+.upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.uz-icon{font-size:24px;margin-bottom:6px;display:block;transition:transform .18s;}
+.upload-zone:hover .uz-icon,.upload-zone.has-file .uz-icon{transform:scale(1.08);}
+.uz-title{font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:2px;}
+.uz-hint{font-size:10.5px;color:var(--muted-light);}
+.uz-name{font-size:10.5px;color:var(--teal-deeper);font-weight:700;margin-top:5px;font-family:monospace;word-break:break-all;}
+
+.upload-single{margin-bottom:18px;}
+.upload-single .upload-zone{max-width:320px;}
+
+.btn-run{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:13.5px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:all .16s;box-shadow:0 4px 13px rgba(59,191,191,.35);}
+.btn-run:hover{background:var(--teal-dark);transform:translateY(-1px);box-shadow:0 6px 17px rgba(59,191,191,.4);}
+.btn-run:active{transform:translateY(0);box-shadow:none;}
+.btn-run:disabled{background:var(--muted-light);box-shadow:none;cursor:not-allowed;transform:none;}
+
+.btn-dl{display:inline-flex;align-items:center;gap:8px;background:var(--white);color:var(--teal-deeper);border:2px solid var(--teal);border-radius:8px;padding:10px 20px;font-size:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;text-decoration:none;transition:all .16s;margin-top:15px;box-shadow:0 2px 7px rgba(59,191,191,.12);}
+.btn-dl:hover{background:var(--teal);color:#fff;transform:translateY(-1px);}
+
+.spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.prog-wrap{background:var(--cream-dark);border-radius:20px;height:5px;overflow:hidden;margin-bottom:10px;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-dark));border-radius:20px;animation:prog 2s ease-in-out infinite;}
+@keyframes prog{0%{width:5%;margin-left:0}50%{width:55%;margin-left:22%}100%{width:5%;margin-left:90%}}
+
+.alert{display:flex;align-items:flex-start;gap:11px;padding:12px 15px;border-radius:8px;font-size:13px;line-height:1.5;border:1px solid transparent;font-weight:500;}
+.alert-ok{background:var(--teal-light);color:var(--teal-deeper);border-color:var(--teal-mid);}
+.alert-err{background:var(--error-bg);color:var(--error);border-color:#F5C6C2;}
+.alert-ico{font-size:15px;flex-shrink:0;margin-top:1px;}
+.alert-ttl{font-family:'Nunito',sans-serif;font-weight:800;margin-bottom:2px;font-size:13px;}
+
+.result-card{background:var(--white);border:1px solid var(--border);border-top:3px solid var(--teal);border-radius:var(--r);padding:20px 24px;margin-bottom:13px;}
+.load-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-bottom:13px;}
+.load-title{font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--teal-dark);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.hidden{display:none!important;}
 </style>
 </head>
 <body>
 
-<!-- ═══════════ SIDEBAR ═══════════ -->
 <aside class="sidebar">
-  <div class="sidebar-brand">
-    <div class="brand-logo">
-      <div class="brand-paw">🐾</div>
-      <div>
-        <div class="brand-name">Edgard &amp; Cooper</div>
-        <div class="brand-sub">Script Hub</div>
-      </div>
+  <div class="sb-brand">
+    <div class="sb-top">
+      <!-- E&C logo: bubbly rounded style matching brand -->
+      <svg width="120" height="62" viewBox="0 0 120 62" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- "edgard" — large rounded weight, slight left lean like the real logo -->
+        <text x="4" y="28"
+          font-family="Nunito, sans-serif"
+          font-size="26"
+          font-weight="900"
+          letter-spacing="-0.5"
+          fill="white">edgard</text>
+        <!-- "Cooper." — capital C, same bubbly weight -->
+        <text x="4" y="56"
+          font-family="Nunito, sans-serif"
+          font-size="26"
+          font-weight="900"
+          letter-spacing="-0.5"
+          fill="white">Cooper.</text>
+      </svg>
+      <!-- Minimal flat dog -->
+      <svg width="54" height="60" viewBox="0 0 54 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="27" cy="43" rx="15" ry="13" fill="rgba(255,255,255,0.16)"/>
+        <circle cx="27" cy="23" r="12" fill="rgba(255,255,255,0.16)"/>
+        <ellipse cx="17" cy="14" rx="4.5" ry="7.5" fill="rgba(255,255,255,0.2)" transform="rotate(-14 17 14)"/>
+        <ellipse cx="37" cy="14" rx="4.5" ry="7.5" fill="rgba(255,255,255,0.2)" transform="rotate(14 37 14)"/>
+        <circle cx="23" cy="21" r="1.8" fill="rgba(255,255,255,0.65)"/>
+        <circle cx="31" cy="21" r="1.8" fill="rgba(255,255,255,0.65)"/>
+        <circle cx="23.6" cy="20.4" r="0.75" fill="rgba(30,112,112,0.9)"/>
+        <circle cx="31.6" cy="20.4" r="0.75" fill="rgba(30,112,112,0.9)"/>
+        <ellipse cx="27" cy="26" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.5)"/>
+        <path d="M23.5 28.5 Q27 31.5 30.5 28.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+        <path d="M42 38 Q50 30 47 24" stroke="rgba(255,255,255,0.18)" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <rect x="18" y="52" width="5.5" height="7" rx="2.7" fill="rgba(255,255,255,0.14)"/>
+        <rect x="30.5" y="52" width="5.5" height="7" rx="2.7" fill="rgba(255,255,255,0.14)"/>
+      </svg>
     </div>
-    <div class="brand-tagline">Interne automatisering tools</div>
+    <div class="sb-sub">Internal automation tools</div>
   </div>
 
-  <nav class="sidebar-nav">
-    <div class="nav-section">
-      <div class="nav-section-label">Scripts</div>
-
-      <button class="nav-item active" onclick="showPage('launch-check', this)">
-        <div class="nav-icon-wrap">🚀</div>
-        Launch Check
-        <span class="nav-meta">Excel</span>
+  <nav class="sb-nav">
+    <div class="nav-sec">
+      <div class="nav-lbl">Scripts</div>
+      <button class="nav-item active" onclick="showPage('launch-check',this)">
+        <div class="nav-icon">🚀</div>Launch Check<span class="nav-badge">Excel</span>
       </button>
-
-      <button class="nav-item" onclick="showPage('garvis-export', this)">
-        <div class="nav-icon-wrap">📊</div>
-        Garvis Export
-        <span class="nav-meta">Excel</span>
+      <button class="nav-item" onclick="showPage('garvis-export',this)">
+        <div class="nav-icon">📊</div>Garvis Export<span class="nav-badge">Excel</span>
       </button>
     </div>
-
-    <div class="nav-section">
-      <div class="nav-section-label">Binnenkort</div>
-
-      <button class="nav-item" style="opacity:.4;cursor:not-allowed;" disabled>
-        <div class="nav-icon-wrap">📧</div>
-        Email Reports
-        <span class="nav-meta">Soon</span>
-      </button>
-
-      <button class="nav-item" style="opacity:.4;cursor:not-allowed;" disabled>
-        <div class="nav-icon-wrap">🧹</div>
-        Data Cleaning
-        <span class="nav-meta">Soon</span>
-      </button>
+    <div class="nav-sec">
+      <div class="nav-lbl">Coming soon</div>
+      <button class="nav-item" style="opacity:.36;" disabled><div class="nav-icon">📧</div>Email Reports<span class="nav-badge">Soon</span></button>
+      <button class="nav-item" style="opacity:.36;" disabled><div class="nav-icon">🧹</div>Data Cleaning<span class="nav-badge">Soon</span></button>
+      <button class="nav-item" style="opacity:.36;" disabled><div class="nav-icon">📦</div>Stock Analysis<span class="nav-badge">Soon</span></button>
     </div>
   </nav>
 
-  <div class="sidebar-footer">
-    <div class="sidebar-footer-inner">
-      <div class="footer-label">Hoe het werkt</div>
-      <div class="footer-step"><div class="step-num">1</div> Upload je bestand</div>
-      <div class="footer-step"><div class="step-num">2</div> Klik op uitvoeren</div>
-      <div class="footer-step"><div class="step-num">3</div> Download resultaat</div>
+  <div class="sb-footer">
+    <div class="sb-steps">
+      <div class="steps-lbl">How it works</div>
+      <div class="step-row"><div class="step-n">1</div>Upload your file</div>
+      <div class="step-row"><div class="step-n">2</div>Click run</div>
+      <div class="step-row"><div class="step-n">3</div>Download result</div>
+    </div>
+    <div class="sb-credit">
+      Built by <a href="https://lanark.be" target="_blank">Lanark</a><br>
+      for Edgard &amp; Cooper &middot; Internal use only
     </div>
   </div>
 </aside>
 
-<!-- ═══════════ MAIN ═══════════ -->
 <div class="main">
-
   <div class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-pill">E&amp;C Intern</div>
-      <div class="topbar-crumb">Script Hub &rsaquo; <strong id="topbar-current">Launch Check</strong></div>
+    <div class="tp-left">
+      <div class="tp-pill">E&amp;C Internal</div>
+      <div class="tp-crumb">Script Hub &rsaquo; <strong id="topbar-current">Launch Check</strong></div>
     </div>
-    <div class="topbar-avatar">🐾</div>
+    <div class="tp-credit">Built by <span>Lanark</span></div>
   </div>
 
-  <!-- PAGE: LAUNCH CHECK -->
+  <!-- LAUNCH CHECK -->
   <div class="content" id="page-launch-check">
     <div class="page-hero">
       <div class="hero-icon">🚀</div>
       <div class="hero-text">
         <div class="hero-title">Launch Check</div>
-        <div class="hero-desc">Vergelijkt je orders export met het launch plan en berekent of producten op tijd, te vroeg of te laat gelanceerd zijn. Output: Launch_Check, Exceptions en Orders_By_Day.</div>
+        <div class="hero-desc">Compares your orders export with the launch plan and calculates whether products launched on time, too early, or too late. Output: Launch_Check, Exceptions and Orders_By_Day.</div>
       </div>
     </div>
-
     <div class="card">
-      <div class="card-header">
+      <div class="card-hd">
         <div>
-          <div class="card-title">Bestanden uploaden</div>
-          <div class="card-desc">Upload de orders export en het launch plan om de analyse te starten.</div>
+          <div class="card-title">Upload files</div>
+          <div class="card-desc">Upload the orders export and the launch plan to start the analysis.</div>
         </div>
-        <div class="card-badge">2 bestanden vereist</div>
+        <div class="card-badge">2 files required</div>
       </div>
-
       <div class="upload-grid">
         <div>
-          <div class="upload-field-label">Orders bestand</div>
+          <div class="upload-lbl">Orders file</div>
           <div class="upload-zone" id="zone-orders">
             <input type="file" accept=".xlsx,.xls" id="input-orders" onchange="handleFile(this,'zone-orders','name-orders')">
-            <span class="upload-zone-icon">📋</span>
-            <div class="upload-zone-title">Sleep of klik</div>
-            <div class="upload-zone-hint">.xlsx · .xls</div>
-            <div class="upload-filename hidden" id="name-orders"></div>
+            <span class="uz-icon">📋</span>
+            <div class="uz-title">Drag or click to upload</div>
+            <div class="uz-hint">.xlsx · .xls</div>
+            <div class="uz-name hidden" id="name-orders"></div>
           </div>
         </div>
         <div>
-          <div class="upload-field-label">Launch plan</div>
+          <div class="upload-lbl">Launch plan</div>
           <div class="upload-zone" id="zone-launch">
             <input type="file" accept=".xlsx,.xls" id="input-launch" onchange="handleFile(this,'zone-launch','name-launch')">
-            <span class="upload-zone-icon">📅</span>
-            <div class="upload-zone-title">Sleep of klik</div>
-            <div class="upload-zone-hint">.xlsx · .xls</div>
-            <div class="upload-filename hidden" id="name-launch"></div>
+            <span class="uz-icon">📅</span>
+            <div class="uz-title">Drag or click to upload</div>
+            <div class="uz-hint">.xlsx · .xls</div>
+            <div class="uz-name hidden" id="name-launch"></div>
           </div>
         </div>
       </div>
-
-      <button class="btn-run" id="btn-launch" onclick="runLaunchCheck()">▶&nbsp; Script uitvoeren</button>
+      <button class="btn-run" id="btn-launch" onclick="runLaunchCheck()">&#9654;&nbsp; Run script</button>
     </div>
     <div id="result-launch"></div>
   </div>
 
-  <!-- PAGE: GARVIS EXPORT -->
+  <!-- GARVIS EXPORT -->
   <div class="content hidden" id="page-garvis-export">
     <div class="page-hero">
       <div class="hero-icon">📊</div>
       <div class="hero-text">
         <div class="hero-title">Garvis Export</div>
-        <div class="hero-desc">Laadt je Garvis XLSX export en bouwt automatisch een overzicht sheet met Sales (rood) en Planner Forecast (blauw) naast elkaar, inclusief KPI-metrics en gemiddelden.</div>
+        <div class="hero-desc">Loads your Garvis XLSX export and automatically builds an overview sheet with Sales (red) and Planner Forecast (blue) side by side, including KPI metrics and averages.</div>
       </div>
     </div>
-
     <div class="card">
-      <div class="card-header">
+      <div class="card-hd">
         <div>
-          <div class="card-title">Garvis export uploaden</div>
-          <div class="card-desc">Het bestand moet een "Sales" of "Actual" sheet én een "Planner Forecast" sheet bevatten.</div>
+          <div class="card-title">Upload Garvis export</div>
+          <div class="card-desc">The file must contain a "Sales" or "Actual" sheet and a "Planner Forecast" sheet.</div>
         </div>
-        <div class="card-badge">1 bestand vereist</div>
+        <div class="card-badge">1 file required</div>
       </div>
-
       <div class="upload-single">
-        <div class="upload-field-label">Garvis export bestand</div>
+        <div class="upload-lbl">Garvis export file</div>
         <div class="upload-zone" id="zone-garvis">
           <input type="file" accept=".xlsx,.xlsm,.xls" id="input-garvis" onchange="handleFile(this,'zone-garvis','name-garvis')">
-          <span class="upload-zone-icon">📈</span>
-          <div class="upload-zone-title">Sleep of klik</div>
-          <div class="upload-zone-hint">.xlsx · .xlsm · .xls</div>
-          <div class="upload-filename hidden" id="name-garvis"></div>
+          <span class="uz-icon">📈</span>
+          <div class="uz-title">Drag or click to upload</div>
+          <div class="uz-hint">.xlsx · .xlsm · .xls</div>
+          <div class="uz-name hidden" id="name-garvis"></div>
         </div>
       </div>
-
-      <button class="btn-run" id="btn-garvis" onclick="runGarvisExport()">▶&nbsp; Overzicht bouwen</button>
+      <button class="btn-run" id="btn-garvis" onclick="runGarvisExport()">&#9654;&nbsp; Build overview</button>
     </div>
     <div id="result-garvis"></div>
   </div>
-
 </div>
 
 <script>
-function showPage(pageId, navEl) {
-  document.querySelectorAll('.content').forEach(p => p.classList.add('hidden'));
-  document.getElementById('page-' + pageId).classList.remove('hidden');
-  document.querySelectorAll('.nav-item:not([disabled])').forEach(n => n.classList.remove('active'));
-  navEl.classList.add('active');
-  const labels = { 'launch-check': 'Launch Check', 'garvis-export': 'Garvis Export' };
-  document.getElementById('topbar-current').textContent = labels[pageId] || pageId;
+function showPage(id,el){
+  document.querySelectorAll('.content').forEach(p=>p.classList.add('hidden'));
+  document.getElementById('page-'+id).classList.remove('hidden');
+  document.querySelectorAll('.nav-item:not([disabled])').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('topbar-current').textContent={'launch-check':'Launch Check','garvis-export':'Garvis Export'}[id]||id;
 }
-
-function handleFile(input, zoneId, nameId) {
-  const zone = document.getElementById(zoneId);
-  const nameEl = document.getElementById(nameId);
-  if (input.files && input.files[0]) {
-    zone.classList.add('has-file');
-    nameEl.textContent = '✓ ' + input.files[0].name;
-    nameEl.classList.remove('hidden');
-  } else {
-    zone.classList.remove('has-file');
-    nameEl.classList.add('hidden');
-  }
+function handleFile(input,zid,nid){
+  const z=document.getElementById(zid),n=document.getElementById(nid);
+  if(input.files&&input.files[0]){z.classList.add('has-file');n.textContent='&#10003; '+input.files[0].name;n.classList.remove('hidden');}
+  else{z.classList.remove('has-file');n.classList.add('hidden');}
 }
-
-function setBtn(id, loading, label) {
-  const btn = document.getElementById(id);
-  btn.disabled = loading;
-  btn.innerHTML = loading
-    ? '<div class="spinner"></div> Bezig…'
-    : label;
+function setBtn(id,loading,label){
+  const b=document.getElementById(id);b.disabled=loading;
+  b.innerHTML=loading?'<div class="spinner"></div> Processing&#8230;':label;
 }
-
-function showError(id, msg) {
-  document.getElementById(id).innerHTML = `
-    <div class="result-card" style="border-top-color:#C0392B;">
-      <div class="alert alert-error">
-        <div class="alert-icon">⚠️</div>
-        <div><div class="alert-title">Er ging iets mis</div>${msg}</div>
-      </div>
-    </div>`;
+function showErr(id,msg){
+  document.getElementById(id).innerHTML=`<div class="result-card" style="border-top-color:#C0392B;"><div class="alert alert-err"><div class="alert-ico">&#9888;&#65039;</div><div><div class="alert-ttl">Something went wrong</div>${msg}</div></div></div>`;
 }
-
-function showLoading(id, msg) {
-  document.getElementById(id).innerHTML = `
-    <div class="loading-card">
-      <div class="loading-title">
-        <div class="spinner" style="border-color:rgba(0,167,157,.2);border-top-color:var(--teal);"></div>
-        ${msg}…
-      </div>
-      <div class="progress-wrap"><div class="progress-bar"></div></div>
-    </div>`;
+function showLoad(id,msg){
+  document.getElementById(id).innerHTML=`<div class="load-card"><div class="load-title"><div class="spinner" style="border-color:rgba(59,191,191,.2);border-top-color:var(--teal);"></div>${msg}&#8230;</div><div class="prog-wrap"><div class="prog-bar"></div></div></div>`;
 }
-
-async function runLaunchCheck() {
-  const o = document.getElementById('input-orders');
-  const l = document.getElementById('input-launch');
-  if (!o.files[0] || !l.files[0]) { showError('result-launch', 'Upload beide bestanden voor je het script uitvoert.'); return; }
-
-  setBtn('btn-launch', true);
-  showLoading('result-launch', 'Bestanden analyseren');
-
-  const form = new FormData();
-  form.append('orders_file', o.files[0]);
-  form.append('launch_file', l.files[0]);
-
-  try {
-    const resp = await fetch('/run/launch-check', { method: 'POST', body: form });
-    if (!resp.ok) { const e = await resp.json().catch(()=>({error:resp.statusText})); throw new Error(e.error||resp.statusText); }
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const fname = `launch_check_${new Date().toISOString().slice(0,16).replace(/[T:]/g,'_')}.xlsx`;
-    document.getElementById('result-launch').innerHTML = `
-      <div class="result-card">
-        <div class="alert alert-success">
-          <div class="alert-icon">✅</div>
-          <div><div class="alert-title">Analyse klaar!</div>Output bevat 3 sheets: Launch_Check, Exceptions en Orders_By_Day.</div>
-        </div>
-        <a class="btn-download" href="${url}" download="${fname}">⬇&nbsp; Download resultaat (.xlsx)</a>
-      </div>`;
-  } catch(e) { showError('result-launch', e.message); }
-  finally { setBtn('btn-launch', false, '▶&nbsp; Script uitvoeren'); }
+async function runLaunchCheck(){
+  const o=document.getElementById('input-orders'),l=document.getElementById('input-launch');
+  if(!o.files[0]||!l.files[0]){showErr('result-launch','Please upload both files before running the script.');return;}
+  setBtn('btn-launch',true);showLoad('result-launch','Analysing files');
+  const fd=new FormData();fd.append('orders_file',o.files[0]);fd.append('launch_file',l.files[0]);
+  try{
+    const r=await fetch('/run/launch-check',{method:'POST',body:fd});
+    if(!r.ok){const e=await r.json().catch(()=>({error:r.statusText}));throw new Error(e.error||r.statusText);}
+    const blob=await r.blob(),url=URL.createObjectURL(blob);
+    const fn='launch_check_'+new Date().toISOString().slice(0,16).replace(/[T:]/g,'_')+'.xlsx';
+    document.getElementById('result-launch').innerHTML=`<div class="result-card"><div class="alert alert-ok"><div class="alert-ico">&#9989;</div><div><div class="alert-ttl">Analysis complete!</div>Output contains 3 sheets: Launch_Check, Exceptions and Orders_By_Day.</div></div><a class="btn-dl" href="${url}" download="${fn}">&#11015;&nbsp; Download result (.xlsx)</a></div>`;
+  }catch(e){showErr('result-launch',e.message);}
+  finally{setBtn('btn-launch',false,'&#9654;&nbsp; Run script');}
 }
-
-async function runGarvisExport() {
-  const g = document.getElementById('input-garvis');
-  if (!g.files[0]) { showError('result-garvis', 'Upload eerst je Garvis export bestand.'); return; }
-
-  setBtn('btn-garvis', true);
-  showLoading('result-garvis', 'Overzicht samenstellen');
-
-  const form = new FormData();
-  form.append('garvis_file', g.files[0]);
-
-  try {
-    const resp = await fetch('/run/garvis-export', { method: 'POST', body: form });
-    if (!resp.ok) { const e = await resp.json().catch(()=>({error:resp.statusText})); throw new Error(e.error||resp.statusText); }
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const fname = `GARVIS_OVERVIEW_${new Date().toISOString().slice(0,13).replace(/[T:]/g,'')}.xlsx`;
-    document.getElementById('result-garvis').innerHTML = `
-      <div class="result-card">
-        <div class="alert alert-success">
-          <div class="alert-icon">✅</div>
-          <div><div class="alert-title">Overzicht klaar!</div>Het bestand bevat 3 sheets: Overview, Sales en Planner Forecast.</div>
-        </div>
-        <a class="btn-download" href="${url}" download="${fname}">⬇&nbsp; Download overzicht (.xlsx)</a>
-      </div>`;
-  } catch(e) { showError('result-garvis', e.message); }
-  finally { setBtn('btn-garvis', false, '▶&nbsp; Overzicht bouwen'); }
+async function runGarvisExport(){
+  const g=document.getElementById('input-garvis');
+  if(!g.files[0]){showErr('result-garvis','Please upload your Garvis export file first.');return;}
+  setBtn('btn-garvis',true);showLoad('result-garvis','Building overview');
+  const fd=new FormData();fd.append('garvis_file',g.files[0]);
+  try{
+    const r=await fetch('/run/garvis-export',{method:'POST',body:fd});
+    if(!r.ok){const e=await r.json().catch(()=>({error:r.statusText}));throw new Error(e.error||r.statusText);}
+    const blob=await r.blob(),url=URL.createObjectURL(blob);
+    const fn='GARVIS_OVERVIEW_'+new Date().toISOString().slice(0,13).replace(/[T:]/g,'')+'.xlsx';
+    document.getElementById('result-garvis').innerHTML=`<div class="result-card"><div class="alert alert-ok"><div class="alert-ico">&#9989;</div><div><div class="alert-ttl">Overview ready!</div>The file contains 3 sheets: Overview, Sales and Planner Forecast.</div></div><a class="btn-dl" href="${url}" download="${fn}">&#11015;&nbsp; Download overview (.xlsx)</a></div>`;
+  }catch(e){showErr('result-garvis',e.message);}
+  finally{setBtn('btn-garvis',false,'&#9654;&nbsp; Build overview');}
 }
 </script>
 </body>
