@@ -21,10 +21,10 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 
 /* SIDEBAR */
 .sidebar{width:var(--sb-w);background:var(--teal-sb);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
-.sb-brand{background:var(--teal-deeper);padding:18px 18px 14px;position:relative;overflow:hidden;}
+.sb-brand{background:#3BBFBF;padding:18px 18px 14px;position:relative;overflow:hidden;}
 .sb-brand::before{content:'';position:absolute;top:-22px;right:-22px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.06);}
 .sb-top{display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:2;}
-.sb-sub{font-size:10px;color:rgba(255,255,255,0.4);font-weight:500;position:relative;z-index:2;padding-bottom:16px;margin-top:5px;letter-spacing:.02em;}
+.sb-sub{font-size:10px;color:rgba(255,255,255,0.7);font-weight:600;position:relative;z-index:2;padding-bottom:16px;margin-top:5px;letter-spacing:.02em;}
 .sb-nav{flex:1;padding:16px 11px;}
 .nav-lbl{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,0.27);padding:0 8px;margin-bottom:6px;}
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.58);font-size:13px;font-weight:700;transition:all .15s;margin-bottom:3px;border:none;background:transparent;width:100%;text-align:left;font-family:'Nunito',sans-serif;}
@@ -61,7 +61,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 .page-credit a:hover{color:#1B4F9B;text-decoration:underline;}
 
 /* PET BACKGROUND */
-.pet-bg{position:fixed;bottom:0;right:0;width:700px;height:600px;object-fit:contain;object-position:bottom right;pointer-events:none;z-index:0;opacity:0.15;}
+.pet-bg{position:fixed;bottom:0;right:0;width:900px;height:750px;object-fit:contain;object-position:bottom right;pointer-events:none;z-index:0;opacity:0.55;mix-blend-mode:multiply;}
 /* CONTENT */
 .content{padding:30px 36px;max-width:860px;width:100%;position:relative;z-index:1;}
 .page-hero{background:linear-gradient(130deg,var(--teal-deeper) 0%,var(--teal-dark) 55%,var(--teal) 100%);border-radius:var(--r);padding:22px 26px;margin-bottom:20px;position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;}
