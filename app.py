@@ -491,7 +491,7 @@ def upload_baseline():
 
     # Save pending status immediately
     job_id = datetime.now().strftime('%Y%m%d_%H%M%S%f')
-    _job_status[job_id] = {"status": "running", "msg": "Processing..."}
+    _set_job(job_id, "running", "Processing...")
     save_json(KEY_BASELINE_META, {
         "filename": f.filename,
         "uploaded_at": datetime.now().isoformat(),
