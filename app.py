@@ -682,7 +682,6 @@ def lookup_baseline_for_entries(entries):
         country = normalize_country(entry["country"])
         for w in entry.get("weeks", []):
             needed_keys.add(f"{chain}__{sap}__{country}__{w['date']}")
-            # Also add surrounding weeks
             for sd in get_surrounding_weeks(w["date"], n=1):
                 needed_keys.add(f"{chain}__{sap}__{country}__{sd}")
 
@@ -691,14 +690,12 @@ def lookup_baseline_for_entries(entries):
         meta = db_get(f"{prefix}_chunks")
         if not meta:
             continue
+        # Scan ALL chunks — don't stop early (keys are spread across chunks)
         for i in range(meta["count"]):
             chunk = db_get(f"{prefix}_chunk_{i}", {})
-            # Only keep keys we actually need
-            relevant = {k: v for k, v in chunk.items() if k in needed_keys}
-            result[kind].update(relevant)
-            # Stop early if we found all needed keys
-            if needed_keys.issubset(set(result["forecast"]) | set(result["actuals"])):
-                break
+            for k in needed_keys:
+                if k in chunk:
+                    result[kind][k] = chunk[k]
     return result
 
 @app.route("/promo/<promo_id>/recalculate", methods=["POST"])
@@ -879,11 +876,34 @@ def debug_job(job_id):
 
 @app.route("/debug/meta")
 def debug_meta():
+    fc_meta  = db_get("baseline_forecast_chunks")
+    act_meta = db_get("baseline_actuals_chunks")
+
+    # Spot-check: look for Carrefour FR__1000338__FR__2026-03-23 across all chunks
+    test_key = "Carrefour FR__1000338__FR__2026-03-23"
+    found_in_fc  = False
+    found_in_act = False
+    if fc_meta:
+        for i in range(fc_meta["count"]):
+            chunk = db_get(f"baseline_forecast_chunk_{i}", {})
+            if test_key in chunk:
+                found_in_fc = chunk[test_key]
+                break
+    if act_meta:
+        for i in range(act_meta["count"]):
+            chunk = db_get(f"baseline_actuals_chunk_{i}", {})
+            if test_key in chunk:
+                found_in_act = chunk[test_key]
+                break
+
     return jsonify({
-        "baseline_meta": db_get(KEY_BASELINE_META),
-        "promo_db_count": len(db_get(KEY_PROMO_DB, [])),
-        "forecast_chunks": db_get("baseline_forecast_chunks"),
-        "actuals_chunks": db_get("baseline_actuals_chunks"),
+        "baseline_meta":    db_get(KEY_BASELINE_META),
+        "promo_db_count":   len(db_get(KEY_PROMO_DB, [])),
+        "forecast_chunks":  fc_meta,
+        "actuals_chunks":   act_meta,
+        "spot_check_key":   test_key,
+        "found_in_forecast": found_in_fc,
+        "found_in_actuals":  found_in_act,
     })
 
 if __name__ == "__main__":
