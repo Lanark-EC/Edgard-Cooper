@@ -846,6 +846,27 @@ def debug_lookup():
         "total_actuals_keys":  sum(db_get(f"baseline_actuals_chunks",  {}).get("total", 0) for _ in [1]),
     })
 
+@app.route("/debug/full_reset")
+def debug_full_reset():
+    """Clear all baseline chunks, meta and promos completely."""
+    # Clear baseline meta
+    db_set(KEY_BASELINE_META, None)
+    db_set(KEY_PROMO_DB, [])
+
+    # Clear all forecast chunks
+    fc_meta = db_get("baseline_forecast_chunks", {"count": 0})
+    for i in range(fc_meta.get("count", 0) + 5):
+        db_set(f"baseline_forecast_chunk_{i}", {})
+    db_set("baseline_forecast_chunks", None)
+
+    # Clear all actuals chunks
+    act_meta = db_get("baseline_actuals_chunks", {"count": 0})
+    for i in range(act_meta.get("count", 0) + 5):
+        db_set(f"baseline_actuals_chunk_{i}", {})
+    db_set("baseline_actuals_chunks", None)
+
+    return jsonify({"ok": True, "msg": "Full reset complete. All baseline and promo data cleared."})
+
 @app.route("/debug/clear_baseline")
 def debug_clear_baseline():
     """Reset stuck baseline processing state."""
