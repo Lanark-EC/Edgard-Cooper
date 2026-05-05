@@ -426,6 +426,9 @@ def calculate_uplift(promo_entries, baseline):
             fc  = forecast.get(key)
             act = actuals.get(key)
 
+            # Handle both old format (promo_units) and new format (units)
+            promo_units = w.get("units") or w.get("promo_units") or 0
+
             # Build surrounding weeks context (+/- 1 week)
             surrounding = []
             for sd in get_surrounding_weeks(d, n=1):
@@ -442,15 +445,15 @@ def calculate_uplift(promo_entries, baseline):
                 act_key = f"{chain}__{sap}__{country}__{override_date}"
                 act = actuals.get(act_key)
 
-            total_promo_units += w["units"]
+            total_promo_units += promo_units
             if fc  is not None: total_forecast += fc
             else: missing_fc += 1
             if act is not None: total_actual += act
             else: missing_act += 1
 
             week_details.append({
-                "date": d, "label": w["label"],
-                "promo_units": w["units"],
+                "date": d, "label": w.get("label", d),
+                "promo_units": promo_units,
                 "forecast": fc,
                 "actual": act,
                 "active_date": override_date or d,
