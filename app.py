@@ -535,18 +535,29 @@ def _get_job(job_id):
 def _process_baseline_bg(path, filename, job_id):
     try:
         totals = parse_and_save_baseline(str(path), filename, job_id)
+
+        # Recalculate existing promos if any — but only load baseline once
         db = load_json(KEY_PROMO_DB, [])
         if db:
             _set_job(job_id, "running", "Recalculating existing promos...")
-            baseline = load_baseline()
-            for promo in db:
-                updated = calculate_uplift(promo["entries"], baseline)
-                override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
-                for entry in updated:
-                    entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
-                promo["entries"] = updated
-                promo["recalculated_at"] = datetime.now().isoformat()
-            save_json(KEY_PROMO_DB, db)
+            try:
+                for promo in db:
+                    baseline = lookup_baseline_for_entries(promo["entries"])
+                    updated = calculate_uplift(promo["entries"], baseline)
+                    override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
+                    for entry in updated:
+                        entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
+                    promo["entries"] = updated
+                    promo["recalculated_at"] = datetime.now().isoformat()
+                save_json(KEY_PROMO_DB, db)
+            except Exception as e:
+                # Don't fail the whole job if recalc fails — baseline is saved successfully
+                print(f"Promo recalc failed (non-critical): {e}")
+                _set_job(job_id, "done",
+                         f"Baseline ready — {totals['forecast']:,} forecast + {totals['actuals']:,} actuals rows. "
+                         f"Note: existing promos could not be auto-recalculated (use ↻ Recalculate on each promo).")
+                return
+
         _set_job(job_id, "done",
                  f"Baseline ready — {totals['forecast']:,} forecast + {totals['actuals']:,} actuals rows.")
     except Exception as e:
@@ -608,7 +619,7 @@ def _process_promo_bg(path, filename, promo_name, promo_id, job_id):
             db = load_json(KEY_PROMO_DB, [])
             save_json(KEY_PROMO_DB, [p for p in db if p["id"] != promo_id])
             return
-        baseline = load_baseline()
+        baseline = lookup_baseline_for_entries(entries)
         _set_job(job_id, "running", f"Calculating uplift for {len(entries)} SKUs...")
         enriched = calculate_uplift(entries, baseline)
         db = load_json(KEY_PROMO_DB, [])
@@ -662,27 +673,54 @@ def promo_status(job_id):
 
 
 
+def lookup_baseline_for_entries(entries):
+    """Load only the baseline chunks that contain keys for the given entries."""
+    needed_keys = set()
+    for entry in entries:
+        chain   = entry["chain"]
+        sap     = entry["sap"]
+        country = normalize_country(entry["country"])
+        for w in entry.get("weeks", []):
+            needed_keys.add(f"{chain}__{sap}__{country}__{w['date']}")
+            # Also add surrounding weeks
+            for sd in get_surrounding_weeks(w["date"], n=1):
+                needed_keys.add(f"{chain}__{sap}__{country}__{sd}")
+
+    result = {"forecast": {}, "actuals": {}}
+    for kind, prefix in [("forecast", "baseline_forecast"), ("actuals", "baseline_actuals")]:
+        meta = db_get(f"{prefix}_chunks")
+        if not meta:
+            continue
+        for i in range(meta["count"]):
+            chunk = db_get(f"{prefix}_chunk_{i}", {})
+            # Only keep keys we actually need
+            relevant = {k: v for k, v in chunk.items() if k in needed_keys}
+            result[kind].update(relevant)
+            # Stop early if we found all needed keys
+            if needed_keys.issubset(set(result["forecast"]) | set(result["actuals"])):
+                break
+    return result
+
 @app.route("/promo/<promo_id>/recalculate", methods=["POST"])
 def recalculate_promo(promo_id):
-    """Recalculate uplift for a promo using current baseline."""
     db    = load_json(KEY_PROMO_DB, [])
     promo = next((p for p in db if p["id"] == promo_id), None)
     if not promo:
         flash("Promo not found.", "error")
         return redirect(url_for("promo_uplift"))
     try:
-        baseline = load_baseline()
-        # Re-normalize countries in existing entries
         for entry in promo["entries"]:
             entry["country"] = normalize_country(entry["country"])
-        updated = calculate_uplift(promo["entries"], baseline)
+        # Load only the baseline data needed for this promo's SKUs
+        baseline = lookup_baseline_for_entries(promo["entries"])
+        updated  = calculate_uplift(promo["entries"], baseline)
         override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
         for entry in updated:
             entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
         promo["entries"] = updated
         promo["recalculated_at"] = datetime.now().isoformat()
         save_json(KEY_PROMO_DB, db)
-        flash(f"Promo recalculated successfully.", "success")
+        flash("Promo recalculated successfully.", "success")
     except Exception as e:
         flash(f"Error: {e}", "error")
     return redirect(url_for("promo_detail", promo_id=promo_id))
@@ -713,7 +751,7 @@ def set_active_week(promo_id):
                 entry["active_week_override"][promo_date] = active_date
 
             # Recalculate this entry
-            baseline = load_baseline()
+            baseline = lookup_baseline_for_entries([entry])
             updated  = calculate_uplift([entry], baseline)
             if updated:
                 u = updated[0]
