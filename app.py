@@ -415,37 +415,34 @@ def promo_uplift():
 
 import threading
 
-# Track background job status
-_job_status = {}  # job_id -> {"status": "running"|"done"|"error", "msg": "..."}
+def _set_job(job_id, status, msg):
+    db_set(f"job_{job_id}", {"status": status, "msg": msg})
+
+def _get_job(job_id):
+    return db_get(f"job_{job_id}", {"status": "running", "msg": "Processing..."})
 
 def _process_baseline_bg(path, filename, job_id):
     """Run baseline parsing in a background thread."""
     try:
-        _job_status[job_id] = {"status": "running", "msg": "Step 1/4: Parsing Excel file..."}
+        _set_job(job_id, "running", "Step 1/4: Parsing Excel file...")
         baseline = parse_baseline(str(path))
-
         fc_count  = len(baseline["forecast"])
         act_count = len(baseline["actuals"])
-        _job_status[job_id] = {"status": "running", "msg": f"Step 2/4: Saving {fc_count} forecast + {act_count} actuals rows to database..."}
 
-        # Store forecast and actuals in SEPARATE smaller chunks to avoid giant blob
-        # Split into chunks of 10,000 entries each
+        _set_job(job_id, "running", f"Step 2/4: Saving {fc_count} forecast rows...")
         CHUNK_SIZE = 10000
-
         def chunked_save(data_dict, prefix):
             items    = list(data_dict.items())
             n_chunks = (len(items) + CHUNK_SIZE - 1) // CHUNK_SIZE
             for i in range(n_chunks):
                 chunk = dict(items[i * CHUNK_SIZE:(i + 1) * CHUNK_SIZE])
                 db_set(f"{prefix}_chunk_{i}", chunk)
-            # Store chunk count so we know how many to load
             db_set(f"{prefix}_chunks", {"count": n_chunks, "total": len(items)})
 
         chunked_save(baseline["forecast"], "baseline_forecast")
-        _job_status[job_id] = {"status": "running", "msg": f"Step 3/4: Saved forecast data, saving actuals..."}
+        _set_job(job_id, "running", f"Step 3/4: Saving {act_count} actuals rows...")
         chunked_save(baseline["actuals"], "baseline_actuals")
 
-        # Save meta
         db_set(KEY_BASELINE_META, {
             "filename": filename,
             "uploaded_at": datetime.now().isoformat(),
@@ -454,9 +451,7 @@ def _process_baseline_bg(path, filename, job_id):
             "processing": False,
         })
 
-        _job_status[job_id] = {"status": "running", "msg": "Step 4/4: Recalculating existing promos..."}
-
-        # Recalculate existing promos
+        _set_job(job_id, "running", "Step 4/4: Recalculating existing promos...")
         db = load_json(KEY_PROMO_DB, [])
         if db:
             for promo in db:
@@ -468,14 +463,11 @@ def _process_baseline_bg(path, filename, job_id):
                 promo["recalculated_at"] = datetime.now().isoformat()
             save_json(KEY_PROMO_DB, db)
 
-        _job_status[job_id] = {
-            "status": "done",
-            "msg": f"Baseline ready — {fc_count} forecast rows, {act_count} actuals rows."
-        }
+        _set_job(job_id, "done", f"Baseline ready — {fc_count} forecast + {act_count} actuals rows.")
     except Exception as e:
         import traceback
         traceback.print_exc()
-        _job_status[job_id] = {"status": "error", "msg": f"{type(e).__name__}: {e}"}
+        _set_job(job_id, "error", f"{type(e).__name__}: {e}")
 
 @app.route("/upload_baseline", methods=["POST"])
 def upload_baseline():
@@ -507,16 +499,14 @@ def upload_baseline():
 
 @app.route("/baseline_status")
 def baseline_status():
-    """Poll endpoint to check background job status."""
     meta = load_json(KEY_BASELINE_META, None)
     if not meta:
         return jsonify({"status": "none"})
     job_id = meta.get("job_id")
     if not job_id or not meta.get("processing"):
         return jsonify({"status": "done", "msg": "Baseline active."})
-    job = _job_status.get(job_id, {"status": "running", "msg": "Processing..."})
+    job = _get_job(job_id)
     if job["status"] == "done":
-        # Update meta to remove processing flag
         meta["processing"] = False
         save_json(KEY_BASELINE_META, meta)
     return jsonify(job)
@@ -526,16 +516,15 @@ def baseline_status():
 def _process_promo_bg(path, filename, promo_name, promo_id, job_id):
     """Run promo parsing in a background thread."""
     try:
-        _job_status[job_id] = {"status": "running", "msg": "Parsing promo file..."}
+        _set_job(job_id, "running", "Parsing promo file...")
         entries = parse_promo(str(path), promo_name)
         if not entries:
-            _job_status[job_id] = {"status": "error", "msg": "No promo data found in the file."}
-            # Remove the placeholder from db
+            _set_job(job_id, "error", "No promo data found in the file.")
             db = load_json(KEY_PROMO_DB, [])
-            db = [p for p in db if p["id"] != promo_id]
-            save_json(KEY_PROMO_DB, db)
+            save_json(KEY_PROMO_DB, [p for p in db if p["id"] != promo_id])
             return
         baseline = load_baseline()
+        _set_job(job_id, "running", f"Calculating uplift for {len(entries)} SKUs...")
         enriched = calculate_uplift(entries, baseline)
         db = load_json(KEY_PROMO_DB, [])
         for p in db:
@@ -545,14 +534,13 @@ def _process_promo_bg(path, filename, promo_name, promo_id, job_id):
                 p["processing"] = False
                 break
         save_json(KEY_PROMO_DB, db)
-        _job_status[job_id] = {"status": "done", "msg": f"'{promo_name}' ready — {len(enriched)} SKUs.", "promo_id": promo_id}
+        _set_job(job_id, "done", f"'{promo_name}' ready — {len(enriched)} SKUs.")
     except Exception as e:
         import traceback
         traceback.print_exc()
-        _job_status[job_id] = {"status": "error", "msg": f"{type(e).__name__}: {e}"}
+        _set_job(job_id, "error", f"{type(e).__name__}: {e}")
         db = load_json(KEY_PROMO_DB, [])
-        db = [p for p in db if p["id"] != promo_id]
-        save_json(KEY_PROMO_DB, db)
+        save_json(KEY_PROMO_DB, [p for p in db if p["id"] != promo_id])
 
 @app.route("/upload_promo", methods=["POST"])
 def upload_promo():
@@ -585,8 +573,7 @@ def upload_promo():
 
 @app.route("/promo_status/<job_id>")
 def promo_status(job_id):
-    job = _job_status.get(job_id, {"status": "running", "msg": "Processing..."})
-    return jsonify(job)
+    return jsonify(_get_job(job_id))
 
 
 
@@ -639,6 +626,19 @@ def prefill():
     vals = [m["uplift_pct"] for m in matches]
     return jsonify({"found": True, "count": len(matches),
                     "avg": round(sum(vals)/len(vals),1), "min": min(vals), "max": max(vals), "history": matches})
+
+@app.route("/debug/job/<job_id>")
+def debug_job(job_id):
+    return jsonify(_get_job(job_id))
+
+@app.route("/debug/meta")
+def debug_meta():
+    return jsonify({
+        "baseline_meta": db_get(KEY_BASELINE_META),
+        "promo_db_count": len(db_get(KEY_PROMO_DB, [])),
+        "forecast_chunks": db_get("baseline_forecast_chunks"),
+        "actuals_chunks": db_get("baseline_actuals_chunks"),
+    })
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
