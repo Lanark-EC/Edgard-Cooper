@@ -4,7 +4,7 @@ from datetime import datetime, date
 from pathlib import Path
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 150 * 1024 * 1024  # 150MB max upload
 app.secret_key = "ec_scripthub_secret"
 
 # ─── Script Hub imports ────────────────────────────────────────
@@ -35,7 +35,8 @@ def save_json(path, data):
 
 def parse_baseline(filepath):
     import pandas as pd
-    xl = pd.ExcelFile(filepath)
+    import gc
+    xl = pd.ExcelFile(filepath, engine="openpyxl")
     result = {"forecast": {}, "actuals": {}}
     sheet_map = {
         "forecast": [s for s in xl.sheet_names if "forecast" in s.lower()],
@@ -44,10 +45,11 @@ def parse_baseline(filepath):
     for kind, sheets in sheet_map.items():
         if not sheets:
             continue
-        df = pd.read_excel(filepath, sheet_name=sheets[0])
 
-        # Normalize column names: strip whitespace, case-insensitive matching
-        col_map = {str(c).strip().lower(): c for c in df.columns}
+        # Read only first row to detect columns
+        df_head = pd.read_excel(filepath, sheet_name=sheets[0],
+                                nrows=1, engine="openpyxl")
+        col_map = {str(c).strip().lower(): c for c in df_head.columns}
 
         def find_col(candidates):
             for c in candidates:
@@ -55,53 +57,73 @@ def parse_baseline(filepath):
                     return col_map[c.lower()]
             return None
 
-        chain_col   = find_col(["Chain", "chain", "CHAIN", "customer", "Customer"])
-        prod_col    = find_col(["ProductID", "productid", "product_id", "Product ID", "SAP", "sap", "material", "Material"])
-        country_col = find_col(["Country", "country", "COUNTRY", "market", "Market"])
+        chain_col   = find_col(["chain", "customer", "client"])
+        prod_col    = find_col(["productid", "product_id", "product id", "sap", "material", "sku"])
+        country_col = find_col(["country", "market"])
 
-        if not chain_col or not prod_col or not country_col:
-            # Fallback: use positional columns (first 3)
-            cols = list(df.columns)
-            chain_col   = cols[0] if len(cols) > 0 else None
-            prod_col    = cols[1] if len(cols) > 1 else None
-            country_col = cols[2] if len(cols) > 2 else None
+        # Fallback to positional
+        cols = list(df_head.columns)
+        if not chain_col:   chain_col   = cols[0] if len(cols) > 0 else None
+        if not prod_col:    prod_col    = cols[1] if len(cols) > 1 else None
+        if not country_col: country_col = cols[2] if len(cols) > 2 else None
 
         id_cols   = [c for c in [chain_col, prod_col, country_col] if c]
-        date_cols = [c for c in df.columns if c not in id_cols]
+        date_cols = [c for c in df_head.columns if c not in id_cols]
 
-        for _, row in df.iterrows():
-            try:
-                chain   = str(row[chain_col]).strip()   if chain_col   else ""
-                country = str(row[country_col]).strip() if country_col else ""
-                raw_prod = row[prod_col] if prod_col else ""
-                prod = str(int(raw_prod)) if pd.notna(raw_prod) and str(raw_prod).strip() not in ("", "nan") else str(raw_prod).strip()
-            except Exception:
-                continue
-
-            for col in date_cols:
-                val = row[col]
-                if pd.isna(val):
-                    continue
+        # Pre-parse date column names once
+        date_map = {}
+        for col in date_cols:
+            col_str = str(col).strip()
+            d = None
+            for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y"):
                 try:
-                    col_str = str(col).strip()
-                    # Try multiple date formats
-                    d = None
-                    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y"):
-                        try:
-                            d = datetime.strptime(col_str, fmt).date()
-                            break
-                        except ValueError:
-                            continue
-                    if d is None:
-                        # Try pandas date parsing
-                        d = pd.to_datetime(col, errors="coerce")
-                        if pd.isna(d):
-                            continue
-                        d = d.date()
-                    key = f"{chain}__{prod}__{country}__{d.isoformat()}"
-                    result[kind][key] = float(val)
+                    d = datetime.strptime(col_str, fmt).date()
+                    break
+                except ValueError:
+                    continue
+            if d is None:
+                try:
+                    parsed = pd.to_datetime(col, errors="coerce")
+                    if not pd.isna(parsed):
+                        d = parsed.date()
+                except Exception:
+                    pass
+            if d is not None:
+                date_map[col] = d.isoformat()
+
+        valid_date_cols = list(date_map.keys())
+
+        # Read in chunks to avoid memory overflow
+        CHUNK = 2000
+        sheet_data = pd.read_excel(filepath, sheet_name=sheets[0],
+                                   engine="openpyxl")
+
+        for start in range(0, len(sheet_data), CHUNK):
+            chunk = sheet_data.iloc[start:start + CHUNK]
+            for _, row in chunk.iterrows():
+                try:
+                    chain   = str(row[chain_col]).strip()   if chain_col   else ""
+                    country = str(row[country_col]).strip() if country_col else ""
+                    raw_p   = row[prod_col] if prod_col else ""
+                    prod    = str(int(raw_p)) if pd.notna(raw_p) and str(raw_p).strip() not in ("", "nan") else str(raw_p).strip()
                 except Exception:
                     continue
+
+                for col in valid_date_cols:
+                    val = row[col]
+                    if pd.isna(val):
+                        continue
+                    try:
+                        key = f"{chain}__{prod}__{country}__{date_map[col]}"
+                        result[kind][key] = float(val)
+                    except Exception:
+                        continue
+
+            gc.collect()
+
+        del sheet_data
+        gc.collect()
+
     return result
 
 def parse_promo(filepath, promo_name):
