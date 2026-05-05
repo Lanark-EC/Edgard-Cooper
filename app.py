@@ -92,21 +92,35 @@ def load_json(key, default):
 def save_json(key, data):
     db_set(key, data)
 
-def parse_baseline(filepath):
-    import pandas as pd
-    import gc
+def parse_and_save_baseline(filepath, filename, job_id):
+    """
+    Parse baseline Excel and save directly to DB in small chunks.
+    Never holds the full dataset in memory at once.
+    """
+    import pandas as pd, gc
+
+    _set_job(job_id, "running", "Opening Excel file...")
+
     xl = pd.ExcelFile(filepath, engine="openpyxl")
-    result = {"forecast": {}, "actuals": {}}
     sheet_map = {
-        "forecast": [s for s in xl.sheet_names if "forecast" in s.lower()],
-        "actuals":  [s for s in xl.sheet_names if "actual"   in s.lower()],
+        "forecast": next((s for s in xl.sheet_names if "forecast" in s.lower()), None),
+        "actuals":  next((s for s in xl.sheet_names if "actual"   in s.lower()), None),
     }
-    for kind, sheets in sheet_map.items():
-        if not sheets:
+
+    CHUNK_SIZE = 5000  # rows per read chunk
+    DB_CHUNK   = 8000  # key-value pairs per DB write
+
+    totals = {"forecast": 0, "actuals": 0}
+
+    for kind, sheet in sheet_map.items():
+        if not sheet:
+            db_set(f"baseline_{kind}_chunks", {"count": 0, "total": 0})
             continue
 
-        # Read only first row to detect columns
-        df_head = pd.read_excel(filepath, sheet_name=sheets[0],
+        _set_job(job_id, "running", f"Reading {kind} sheet...")
+
+        # Read header row only to detect columns
+        df_head = pd.read_excel(filepath, sheet_name=sheet,
                                 nrows=1, engine="openpyxl")
         col_map = {str(c).strip().lower(): c for c in df_head.columns}
 
@@ -116,18 +130,11 @@ def parse_baseline(filepath):
                     return col_map[c.lower()]
             return None
 
-        chain_col   = find_col(["chain", "customer", "client"])
-        prod_col    = find_col(["productid", "product_id", "product id", "sap", "material", "sku"])
-        country_col = find_col(["country", "market"])
-
-        # Fallback to positional
-        cols = list(df_head.columns)
-        if not chain_col:   chain_col   = cols[0] if len(cols) > 0 else None
-        if not prod_col:    prod_col    = cols[1] if len(cols) > 1 else None
-        if not country_col: country_col = cols[2] if len(cols) > 2 else None
-
-        id_cols   = [c for c in [chain_col, prod_col, country_col] if c]
-        date_cols = [c for c in df_head.columns if c not in id_cols]
+        chain_col   = find_col(["chain","customer","client"]) or df_head.columns[0]
+        prod_col    = find_col(["productid","product_id","product id","sap","material","sku"]) or df_head.columns[1]
+        country_col = find_col(["country","market"]) or df_head.columns[2]
+        id_cols     = [chain_col, prod_col, country_col]
+        date_cols   = [c for c in df_head.columns if c not in id_cols]
 
         # Pre-parse date column names once
         date_map = {}
@@ -152,19 +159,26 @@ def parse_baseline(filepath):
 
         valid_date_cols = list(date_map.keys())
 
-        # Read in chunks to avoid memory overflow
-        CHUNK = 2000
-        sheet_data = pd.read_excel(filepath, sheet_name=sheets[0],
-                                   engine="openpyxl")
+        # Get total rows for progress
+        total_rows = 0
+        db_chunk_idx = 0
+        current_chunk = {}
 
-        for start in range(0, len(sheet_data), CHUNK):
-            chunk = sheet_data.iloc[start:start + CHUNK]
-            for _, row in chunk.iterrows():
+        # Read full sheet but process in pandas chunks
+        _set_job(job_id, "running", f"Processing {kind} data (this takes a few minutes)...")
+
+        df_full = pd.read_excel(filepath, sheet_name=sheet, engine="openpyxl")
+        total_rows = len(df_full)
+
+        for row_start in range(0, total_rows, CHUNK_SIZE):
+            chunk_df = df_full.iloc[row_start:row_start + CHUNK_SIZE]
+
+            for _, row in chunk_df.iterrows():
                 try:
-                    chain   = str(row[chain_col]).strip()   if chain_col   else ""
-                    country = str(row[country_col]).strip() if country_col else ""
-                    raw_p   = row[prod_col] if prod_col else ""
-                    prod    = str(int(raw_p)) if pd.notna(raw_p) and str(raw_p).strip() not in ("", "nan") else str(raw_p).strip()
+                    chain   = str(row[chain_col]).strip()
+                    country = str(row[country_col]).strip()
+                    raw_p   = row[prod_col]
+                    prod    = str(int(raw_p)) if pd.notna(raw_p) and str(raw_p).strip() not in ("","nan") else str(raw_p).strip()
                 except Exception:
                     continue
 
@@ -174,16 +188,39 @@ def parse_baseline(filepath):
                         continue
                     try:
                         key = f"{chain}__{prod}__{country}__{date_map[col]}"
-                        result[kind][key] = float(val)
+                        current_chunk[key] = float(val)
                     except Exception:
                         continue
 
+                    # Flush to DB when chunk is full
+                    if len(current_chunk) >= DB_CHUNK:
+                        db_set(f"baseline_{kind}_chunk_{db_chunk_idx}", current_chunk)
+                        totals[kind] += len(current_chunk)
+                        db_chunk_idx += 1
+                        current_chunk = {}
+
+            pct = min(100, int((row_start + CHUNK_SIZE) / total_rows * 100))
+            _set_job(job_id, "running", f"Processing {kind}: {pct}% ({totals[kind]:,} entries saved)...")
             gc.collect()
 
-        del sheet_data
+        # Flush remaining
+        if current_chunk:
+            db_set(f"baseline_{kind}_chunk_{db_chunk_idx}", current_chunk)
+            totals[kind] += len(current_chunk)
+            db_chunk_idx += 1
+
+        db_set(f"baseline_{kind}_chunks", {"count": db_chunk_idx, "total": totals[kind]})
+        del df_full
         gc.collect()
 
-    return result
+    db_set(KEY_BASELINE_META, {
+        "filename": filename,
+        "uploaded_at": datetime.now().isoformat(),
+        "forecast_rows": totals["forecast"],
+        "actuals_rows":  totals["actuals"],
+        "processing": False,
+    })
+    return totals
 
 def parse_promo(filepath, promo_name):
     import pandas as pd, datetime as dt
@@ -422,38 +459,12 @@ def _get_job(job_id):
     return db_get(f"job_{job_id}", {"status": "running", "msg": "Processing..."})
 
 def _process_baseline_bg(path, filename, job_id):
-    """Run baseline parsing in a background thread."""
     try:
-        _set_job(job_id, "running", "Step 1/4: Parsing Excel file...")
-        baseline = parse_baseline(str(path))
-        fc_count  = len(baseline["forecast"])
-        act_count = len(baseline["actuals"])
-
-        _set_job(job_id, "running", f"Step 2/4: Saving {fc_count} forecast rows...")
-        CHUNK_SIZE = 10000
-        def chunked_save(data_dict, prefix):
-            items    = list(data_dict.items())
-            n_chunks = (len(items) + CHUNK_SIZE - 1) // CHUNK_SIZE
-            for i in range(n_chunks):
-                chunk = dict(items[i * CHUNK_SIZE:(i + 1) * CHUNK_SIZE])
-                db_set(f"{prefix}_chunk_{i}", chunk)
-            db_set(f"{prefix}_chunks", {"count": n_chunks, "total": len(items)})
-
-        chunked_save(baseline["forecast"], "baseline_forecast")
-        _set_job(job_id, "running", f"Step 3/4: Saving {act_count} actuals rows...")
-        chunked_save(baseline["actuals"], "baseline_actuals")
-
-        db_set(KEY_BASELINE_META, {
-            "filename": filename,
-            "uploaded_at": datetime.now().isoformat(),
-            "forecast_rows": fc_count,
-            "actuals_rows":  act_count,
-            "processing": False,
-        })
-
-        _set_job(job_id, "running", "Step 4/4: Recalculating existing promos...")
+        totals = parse_and_save_baseline(str(path), filename, job_id)
         db = load_json(KEY_PROMO_DB, [])
         if db:
+            _set_job(job_id, "running", "Recalculating existing promos...")
+            baseline = load_baseline()
             for promo in db:
                 updated = calculate_uplift(promo["entries"], baseline)
                 override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
@@ -462,8 +473,8 @@ def _process_baseline_bg(path, filename, job_id):
                 promo["entries"] = updated
                 promo["recalculated_at"] = datetime.now().isoformat()
             save_json(KEY_PROMO_DB, db)
-
-        _set_job(job_id, "done", f"Baseline ready — {fc_count} forecast + {act_count} actuals rows.")
+        _set_job(job_id, "done",
+                 f"Baseline ready — {totals['forecast']:,} forecast + {totals['actuals']:,} actuals rows.")
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -626,6 +637,12 @@ def prefill():
     vals = [m["uplift_pct"] for m in matches]
     return jsonify({"found": True, "count": len(matches),
                     "avg": round(sum(vals)/len(vals),1), "min": min(vals), "max": max(vals), "history": matches})
+
+@app.route("/debug/clear_baseline")
+def debug_clear_baseline():
+    """Reset stuck baseline processing state."""
+    db_set(KEY_BASELINE_META, None)
+    return jsonify({"ok": True, "msg": "Baseline meta cleared. You can upload again."})
 
 @app.route("/debug/job/<job_id>")
 def debug_job(job_id):
