@@ -640,29 +640,33 @@ def prefill():
 
 @app.route("/debug/lookup")
 def debug_lookup():
-    """Check if a specific chain/product/country combination exists in baseline."""
     chain   = request.args.get("chain", "Carrefour FR")
     prod    = request.args.get("prod", "1000338")
     country = request.args.get("country", "France")
     date    = request.args.get("date", "2026-03-23")
 
     key_exact = f"{chain}__{prod}__{country}__{date}"
+    baseline  = load_baseline()
+    forecast  = baseline.get("forecast", {})
+    actuals   = baseline.get("actuals", {})
 
-    # Also try alternate country codes
-    baseline = load_baseline()
-    forecast = baseline.get("forecast", {})
-    actuals  = baseline.get("actuals", {})
+    # Search by prod only
+    fc_prod  = [k for k in list(forecast.keys()) if f"__{prod}__" in k][:15]
+    act_prod = [k for k in list(actuals.keys())  if f"__{prod}__" in k][:15]
 
-    # Search for any key containing prod
-    fc_matches  = [k for k in list(forecast.keys())[:50000] if f"__{prod}__" in k][:10]
-    act_matches = [k for k in list(actuals.keys())[:50000]  if f"__{prod}__" in k][:10]
+    # Search by chain substring
+    chain_lower = chain.lower()
+    fc_chain  = [k for k in list(forecast.keys()) if chain_lower in k.lower()][:10]
+    act_chain = [k for k in list(actuals.keys())  if chain_lower in k.lower()][:10]
 
     return jsonify({
         "key_tried": key_exact,
         "in_forecast": key_exact in forecast,
         "in_actuals":  key_exact in actuals,
-        "forecast_sample_keys_with_prod": fc_matches,
-        "actuals_sample_keys_with_prod":  act_matches,
+        "forecast_keys_with_prod":  fc_prod,
+        "actuals_keys_with_prod":   act_prod,
+        "forecast_keys_with_chain": fc_chain,
+        "actuals_keys_with_chain":  act_chain,
     })
 
 @app.route("/debug/clear_baseline")
