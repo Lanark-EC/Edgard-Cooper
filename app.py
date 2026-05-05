@@ -352,7 +352,7 @@ def parse_promo(filepath, promo_name):
                 weeks.append({"date": week_date, "label": week_label, "units": fval})
 
         if weeks:
-            entries.append({"country": country, "chain": chain, "sap": sap,
+            entries.append({"country": normalize_country(country), "chain": chain, "sap": sap,
                             "desc": desc, "subtype": subtype, "demand": demand, "weeks": weeks})
     return entries
 
@@ -368,22 +368,95 @@ def load_baseline():
             result[kind].update(chunk)
     return result
 
+# Country name → ISO code mapping
+COUNTRY_MAP = {
+    "france": "FR", "frankrijk": "FR",
+    "belgium": "BE", "belgië": "BE", "belgie": "BE", "belgique": "BE",
+    "netherlands": "NL", "nederland": "NL", "pays-bas": "NL",
+    "germany": "DE", "deutschland": "DE", "allemagne": "DE",
+    "italy": "IT", "italia": "IT", "italie": "IT",
+    "spain": "ES", "españa": "ES", "espagne": "ES",
+    "united kingdom": "GB", "uk": "GB", "great britain": "GB",
+    "sweden": "SE", "sverige": "SE",
+    "denmark": "DK", "danmark": "DK",
+    "norway": "NO", "norge": "NO",
+    "finland": "FI", "suomi": "FI",
+    "austria": "AT", "österreich": "AT",
+    "switzerland": "CH", "schweiz": "CH", "suisse": "CH",
+    "portugal": "PT",
+    "poland": "PL", "polska": "PL",
+    "czech republic": "CZ", "czechia": "CZ",
+}
+
+def normalize_country(c):
+    """Convert full country name to ISO code if possible."""
+    if not c:
+        return c
+    lower = c.strip().lower()
+    return COUNTRY_MAP.get(lower, c.strip())
+
+def get_surrounding_weeks(date_str, n=1):
+    """Return ISO date strings for n weeks before and after a given date."""
+    from datetime import timedelta
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        return [
+            (d - timedelta(weeks=i)).isoformat() for i in range(n, 0, -1)
+        ] + [date_str] + [
+            (d + timedelta(weeks=i)).isoformat() for i in range(1, n + 1)
+        ]
+    except Exception:
+        return [date_str]
+
 def calculate_uplift(promo_entries, baseline):
     forecast, actuals, results = baseline.get("forecast", {}), baseline.get("actuals", {}), []
     for entry in promo_entries:
-        chain, sap, country = entry["chain"], entry["sap"], entry["country"]
+        chain   = entry["chain"]
+        sap     = entry["sap"]
+        country = normalize_country(entry["country"])
+        # Use active_week_date override if set (from F feature)
+        active_week_override = entry.get("active_week_override", {})
+
         total_forecast = total_actual = total_promo_units = missing_fc = missing_act = 0
         week_details = []
+
         for w in entry["weeks"]:
-            d, key = w["date"], f"{chain}__{sap}__{country}__{w['date']}"
-            fc, act = forecast.get(key), actuals.get(key)
+            d   = w["date"]
+            key = f"{chain}__{sap}__{country}__{d}"
+            fc  = forecast.get(key)
+            act = actuals.get(key)
+
+            # Build surrounding weeks context (+/- 1 week)
+            surrounding = []
+            for sd in get_surrounding_weeks(d, n=1):
+                skey = f"{chain}__{sap}__{country}__{sd}"
+                surrounding.append({
+                    "date":   sd,
+                    "actual": actuals.get(skey),
+                    "is_promo_week": sd == d,
+                })
+
+            # Check if user selected a different active week for this SKU+week
+            override_date = active_week_override.get(d)
+            if override_date:
+                act_key = f"{chain}__{sap}__{country}__{override_date}"
+                act = actuals.get(act_key)
+
             total_promo_units += w["units"]
             if fc  is not None: total_forecast += fc
             else: missing_fc += 1
-            if act is not None: total_actual   += act
+            if act is not None: total_actual += act
             else: missing_act += 1
-            week_details.append({"date": d, "label": w["label"],
-                                  "promo_units": w["units"], "forecast": fc, "actual": act})
+
+            week_details.append({
+                "date": d, "label": w["label"],
+                "promo_units": w["units"],
+                "forecast": fc,
+                "actual": act,
+                "active_date": override_date or d,
+                "surrounding": surrounding,
+            })
+
         uplift_units = total_actual - total_forecast if missing_act == 0 and missing_fc == 0 else None
         uplift_pct   = round(uplift_units / total_forecast * 100, 1) if (uplift_units is not None and total_forecast > 0) else None
         auto_status  = "no_data" if uplift_pct is None else ("suspect" if uplift_pct < EXECUTION_THRESHOLD else "confirmed")
@@ -393,7 +466,8 @@ def calculate_uplift(promo_entries, baseline):
                         "total_actual":   round(total_actual,   1),
                         "uplift_units":   round(uplift_units,   1) if uplift_units is not None else None,
                         "uplift_pct":     uplift_pct, "auto_status": auto_status,
-                        "override": None, "missing_fc": missing_fc, "missing_act": missing_act})
+                        "override": None, "missing_fc": missing_fc, "missing_act": missing_act,
+                        "active_week_override": active_week_override})
     return results
 
 # ═══════════════════════════════════════════════════════════════
@@ -588,6 +662,70 @@ def promo_status(job_id):
 
 
 
+@app.route("/promo/<promo_id>/recalculate", methods=["POST"])
+def recalculate_promo(promo_id):
+    """Recalculate uplift for a promo using current baseline."""
+    db    = load_json(KEY_PROMO_DB, [])
+    promo = next((p for p in db if p["id"] == promo_id), None)
+    if not promo:
+        flash("Promo not found.", "error")
+        return redirect(url_for("promo_uplift"))
+    try:
+        baseline = load_baseline()
+        # Re-normalize countries in existing entries
+        for entry in promo["entries"]:
+            entry["country"] = normalize_country(entry["country"])
+        updated = calculate_uplift(promo["entries"], baseline)
+        override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
+        for entry in updated:
+            entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
+        promo["entries"] = updated
+        promo["recalculated_at"] = datetime.now().isoformat()
+        save_json(KEY_PROMO_DB, db)
+        flash(f"Promo recalculated successfully.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("promo_detail", promo_id=promo_id))
+
+@app.route("/promo/<promo_id>/set_active_week", methods=["POST"])
+def set_active_week(promo_id):
+    """Set which week's actuals to use for a specific SKU+promo_week combination."""
+    data         = request.get_json()
+    sap          = data.get("sap")
+    chain        = data.get("chain")
+    country      = data.get("country")
+    promo_date   = data.get("promo_date")   # original promo week date
+    active_date  = data.get("active_date")  # selected actual week date
+
+    db    = load_json(KEY_PROMO_DB, [])
+    promo = next((p for p in db if p["id"] == promo_id), None)
+    if not promo:
+        return jsonify({"error": "not found"}), 404
+
+    for entry in promo["entries"]:
+        if entry["sap"] == sap and entry["chain"] == chain and entry["country"] == country:
+            if "active_week_override" not in entry:
+                entry["active_week_override"] = {}
+            if active_date == promo_date:
+                # Reset to default
+                entry["active_week_override"].pop(promo_date, None)
+            else:
+                entry["active_week_override"][promo_date] = active_date
+
+            # Recalculate this entry
+            baseline = load_baseline()
+            updated  = calculate_uplift([entry], baseline)
+            if updated:
+                u = updated[0]
+                entry.update({k: u[k] for k in [
+                    "weeks", "total_promo_units", "total_forecast", "total_actual",
+                    "uplift_units", "uplift_pct", "auto_status", "active_week_override"
+                ]})
+            break
+
+    save_json(KEY_PROMO_DB, db)
+    return jsonify({"ok": True})
+
 @app.route("/promo/<promo_id>")
 def promo_detail(promo_id):
     db    = load_json(KEY_PROMO_DB, [])
@@ -642,31 +780,32 @@ def prefill():
 def debug_lookup():
     chain   = request.args.get("chain", "Carrefour FR")
     prod    = request.args.get("prod", "1000338")
-    country = request.args.get("country", "France")
+    country = request.args.get("country", "FR")
     date    = request.args.get("date", "2026-03-23")
 
-    key_exact = f"{chain}__{prod}__{country}__{date}"
-    baseline  = load_baseline()
-    forecast  = baseline.get("forecast", {})
-    actuals   = baseline.get("actuals", {})
+    key_exact  = f"{chain}__{prod}__{country}__{date}"
+    key_france = f"{chain}__{prod}__France__{date}"
 
-    # Search by prod only
-    fc_prod  = [k for k in list(forecast.keys()) if f"__{prod}__" in k][:15]
-    act_prod = [k for k in list(actuals.keys())  if f"__{prod}__" in k][:15]
+    baseline = load_baseline()
+    forecast = baseline.get("forecast", {})
+    actuals  = baseline.get("actuals", {})
 
-    # Search by chain substring
-    chain_lower = chain.lower()
-    fc_chain  = [k for k in list(forecast.keys()) if chain_lower in k.lower()][:10]
-    act_chain = [k for k in list(actuals.keys())  if chain_lower in k.lower()][:10]
+    # Search all keys for this product + chain combo
+    search = f"{chain}__{prod}__"
+    fc_matches  = [k for k in forecast if k.startswith(search)][:15]
+    act_matches = [k for k in actuals  if k.startswith(search)][:15]
 
     return jsonify({
-        "key_tried": key_exact,
-        "in_forecast": key_exact in forecast,
-        "in_actuals":  key_exact in actuals,
-        "forecast_keys_with_prod":  fc_prod,
-        "actuals_keys_with_prod":   act_prod,
-        "forecast_keys_with_chain": fc_chain,
-        "actuals_keys_with_chain":  act_chain,
+        "key_tried_FR":     key_exact,
+        "key_tried_France": key_france,
+        "in_forecast_FR":     key_exact  in forecast,
+        "in_actuals_FR":      key_exact  in actuals,
+        "in_forecast_France": key_france in forecast,
+        "in_actuals_France":  key_france in actuals,
+        "forecast_matches":  fc_matches,
+        "actuals_matches":   act_matches,
+        "total_forecast_keys": sum(db_get(f"baseline_forecast_chunks", {}).get("total", 0) for _ in [1]),
+        "total_actuals_keys":  sum(db_get(f"baseline_actuals_chunks",  {}).get("total", 0) for _ in [1]),
     })
 
 @app.route("/debug/clear_baseline")
