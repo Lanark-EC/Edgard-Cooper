@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promo Uplift — E&C Script Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal:#3BBFBF;--teal-dark:#2A9595;--teal-deeper:#1E7070;--teal-sb:#1A6060;
+  --teal-light:#E3F7F7;--teal-mid:#A8E0E0;
+  --cream:#FAF8F4;--cream-dark:#F0EDE6;--white:#FFFFFF;
+  --ink:#1A2B2B;--ink-soft:#2D4040;--muted:#5E7F7F;--muted-light:#9BBEBE;
+  --border:#D0EAEA;--border-mid:#A8D8D8;
+  --sb-w:272px;--r:14px;--rs:9px;
+}
+body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--ink);display:flex;min-height:100vh;font-size:14px;}
+
+/* SIDEBAR — identical to index.html */
+.sidebar{width:var(--sb-w);background:var(--teal-sb);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sb-brand{background:var(--teal-deeper);padding:20px 0 20px;position:relative;overflow:hidden;}
+.sb-top{display:flex;justify-content:center;align-items:center;width:100%;}
+.sb-top img{width:170px;display:block;margin:0 auto;}
+.sb-nav{flex:1;padding:16px 11px;}
+.nav-lbl{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,0.27);padding:0 8px;margin-bottom:6px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.58);font-size:13px;font-weight:700;transition:all .15s;margin-bottom:3px;border:none;background:transparent;width:100%;text-align:left;font-family:'Nunito',sans-serif;text-decoration:none;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.88);}
+.nav-item.active{background:var(--teal);color:#fff;box-shadow:0 3px 12px rgba(59,191,191,.35);}
+.nav-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(255,255,255,0.08);}
+.nav-item.active .nav-icon{background:rgba(255,255,255,0.18);}
+.nav-badge{margin-left:auto;font-size:9.5px;font-weight:700;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.36);padding:2px 7px;border-radius:20px;}
+.nav-item.active .nav-badge{background:rgba(255,255,255,0.18);color:rgba(255,255,255,0.8);}
+.nav-sec{margin-bottom:20px;}
+.sb-footer{padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-credit{text-align:center;font-size:10px;color:rgba(255,255,255,0.2);line-height:1.6;}
+.sb-credit a{color:rgba(255,255,255,0.38);text-decoration:none;font-weight:700;}
+
+/* MAIN */
+.main{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 34px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.tp-left{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+.tp-pill{background:var(--teal-light);color:var(--teal-deeper);font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px;}
+.tp-crumb{color:var(--muted);font-weight:500;}
+.tp-crumb strong{color:var(--ink);font-weight:700;}
+.tp-lanark-logo{display:flex;align-items:center;text-decoration:none;opacity:.85;transition:opacity .15s;}
+.tp-lanark-logo:hover{opacity:1;}
+
+.content{padding:30px 36px;width:100%;}
+
+/* Hero */
+.page-hero{background:linear-gradient(130deg,var(--teal-deeper) 0%,var(--teal-dark) 55%,var(--teal) 100%);border-radius:var(--r);padding:22px 26px;margin-bottom:22px;position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;}
+.page-hero::before{content:'';position:absolute;top:-32px;right:-32px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.06);}
+.hero-icon{width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
+.hero-text{position:relative;z-index:1;}
+.hero-title{font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;}
+.hero-desc{font-size:12.5px;color:rgba(255,255,255,0.68);line-height:1.55;}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+.metric{background:var(--white);border:1px solid var(--border);border-radius:var(--rs);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.metric-val{font-family:'Nunito',sans-serif;font-size:24px;font-weight:800;color:var(--ink);}
+.metric-lbl{font-size:11px;color:var(--muted);margin-top:3px;font-weight:500;}
+
+/* Cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,0.04);}
+.card-title{font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+
+/* Alerts */
+.alert{padding:11px 15px;border-radius:8px;font-size:13px;margin-bottom:16px;font-weight:500;}
+.alert-success{background:var(--teal-light);color:var(--teal-deeper);border:1px solid var(--teal-mid);}
+.alert-error{background:#FDECEA;color:#C0392B;border:1px solid #F5C6C2;}
+
+/* Baseline status */
+.baseline-active{background:#E6F7EE;border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:13px;border:1px solid #B2E0C5;}
+.baseline-active .bl-name{font-weight:700;color:#1A6840;margin-bottom:2px;}
+.baseline-missing{background:#FEF9EC;border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:13px;color:#7A5010;border:1px solid #F0D890;}
+
+/* Forms */
+.form-group{margin-bottom:13px;}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
+input[type=text],input[type=file],select{width:100%;font-size:13px;padding:8px 10px;border:1.5px solid var(--border-mid);border-radius:8px;background:var(--white);color:var(--ink);font-family:'Nunito Sans',sans-serif;}
+input[type=text]:focus,select:focus{outline:none;border-color:var(--teal);}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:8px 16px;border:1.5px solid var(--border-mid);border-radius:8px;background:var(--white);color:var(--ink);cursor:pointer;transition:all .15s;font-family:'Nunito',sans-serif;text-decoration:none;}
+.btn:hover{background:var(--cream);border-color:var(--teal);}
+.btn-primary{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 3px 10px rgba(59,191,191,.3);}
+.btn-primary:hover{background:var(--teal-dark);color:#fff;}
+.btn-danger{color:#C0392B;border-color:#F5C6C2;}
+.btn-danger:hover{background:#FDECEA;}
+.btn-sm{font-size:12px;padding:5px 12px;}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:9px 11px;border-bottom:1.5px solid var(--border);text-align:left;white-space:nowrap;}
+td{padding:10px 11px;border-bottom:1px solid var(--cream-dark);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:#F5FAFA;}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
+.b-green{background:#E6F7EE;color:#1A6840;}
+.b-amber{background:#FEF3E2;color:#7A5010;}
+.b-red{background:#FDECEA;color:#C0392B;}
+.b-gray{background:var(--cream-dark);color:var(--muted);}
+.b-blue{background:var(--teal-light);color:var(--teal-deeper);}
+
+.muted{color:var(--muted);}
+.mono{font-family:monospace;font-size:12px;}
+.text-right{text-align:right;}
+.page-credit{position:fixed;bottom:16px;right:20px;font-size:11px;color:var(--muted-light);font-weight:500;z-index:200;}
+.page-credit a{color:#4A7CC7;text-decoration:none;font-weight:700;}
+.page-credit a:hover{color:#1B4F9B;text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-top">
+      <img src="{{ url_for('static', filename='EC_transparent.png') }}" alt="Edgard & Cooper" onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="nav-sec">
+      <div class="nav-lbl">Scripts</div>
+      <a class="nav-item" href="/"><div class="nav-icon">🚀</div>Launch Check<span class="nav-badge">Excel</span></a>
+      <a class="nav-item" href="/"><div class="nav-icon">📊</div>Garvis Export<span class="nav-badge">Excel</span></a>
+      <a class="nav-item active" href="/promo-uplift"><div class="nav-icon">📈</div>Promo Uplift<span class="nav-badge">New</span></a>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Coming soon</div>
+      <a class="nav-item" style="opacity:.36;pointer-events:none;"><div class="nav-icon">📧</div>Email Reports<span class="nav-badge">Soon</span></a>
+      <a class="nav-item" style="opacity:.36;pointer-events:none;"><div class="nav-icon">🧹</div>Data Cleaning<span class="nav-badge">Soon</span></a>
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-credit">Edgard &amp; Cooper &middot; Internal use only<br>Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="tp-left">
+      <div class="tp-pill">E&amp;C Internal</div>
+      <div class="tp-crumb">Script Hub &rsaquo; <strong>Promo Uplift</strong></div>
+    </div>
+    <a href="https://lanark.be" target="_blank" class="tp-lanark-logo">
+      <div style="display:flex;flex-direction:column;line-height:1.2;">
+        <span style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:800;letter-spacing:2px;color:#1B4F9B;">LANARK</span>
+        <span style="font-family:Arial,Helvetica,sans-serif;font-size:7px;font-weight:500;letter-spacing:0.8px;color:#4A7CC7;white-space:nowrap;">DIGITAL SUPPLY CHAIN ENGINEERS</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="content">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat == 'success' else 'error' }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Hero -->
+    <div class="page-hero">
+      <div class="hero-icon">📈</div>
+      <div class="hero-text">
+        <div class="hero-title">Promo Uplift</div>
+        <div class="hero-desc">Upload promo files and a clean forecast baseline to calculate and track promotional uplift per SKU, chain and country.</div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-val">{{ total_promos }}</div>
+        <div class="metric-lbl">Total promos</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val">{{ confirmed }}</div>
+        <div class="metric-lbl">Confirmed executions</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val">{% if avg_uplift is not none %}{{ avg_uplift }}%{% else %}—{% endif %}</div>
+        <div class="metric-lbl">Avg uplift (confirmed)</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" style="font-size:15px;padding-top:4px;">
+          {% if baseline_meta %}<span style="color:#1A6840;">● Active</span>
+          {% else %}<span class="muted">○ Not set</span>{% endif %}
+        </div>
+        <div class="metric-lbl">Baseline status</div>
+      </div>
+    </div>
+
+    <!-- Upload cards -->
+    <div class="card-grid">
+
+      <!-- Baseline -->
+      <div class="card">
+        <div class="card-title">Baseline — clean forecast snapshot</div>
+        {% if baseline_meta %}
+        <div class="baseline-active">
+          <div class="bl-name">{{ baseline_meta.filename }}</div>
+          <div class="muted" style="font-size:12px;">
+            Uploaded {{ baseline_meta.uploaded_at[:16].replace("T"," ") }} &bull;
+            {{ baseline_meta.forecast_rows }} forecast &bull; {{ baseline_meta.actuals_rows }} actuals
+          </div>
+        </div>
+        {% else %}
+        <div class="baseline-missing">No baseline loaded yet. Upload your workbench export below.</div>
+        {% endif %}
+        <form method="POST" action="/upload_baseline" enctype="multipart/form-data">
+          <div class="form-group">
+            <label class="form-label">Workbench export (.xlsx)</label>
+            <input type="file" name="baseline_file" accept=".xlsx" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">
+            {% if baseline_meta %}Replace baseline{% else %}Upload baseline{% endif %}
+          </button>
+        </form>
+      </div>
+
+      <!-- New promo -->
+      <div class="card">
+        <div class="card-title">Upload new promo</div>
+        <form method="POST" action="/upload_promo" enctype="multipart/form-data">
+          <div class="form-group">
+            <label class="form-label">Promo name</label>
+            <input type="text" name="promo_name" placeholder="e.g. Arcaplanet W20 2026" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Promo file (.xlsx)</label>
+            <input type="file" name="promo_file" accept=".xlsx" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Upload &amp; calculate</button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Promo database -->
+    <div class="card">
+      <div class="card-title">Promo database</div>
+      {% if promos %}
+      <table>
+        <thead>
+          <tr>
+            <th>Promo name</th><th>Uploaded</th><th>SKUs</th>
+            <th>Confirmed</th><th>Suspect / not exec.</th><th>Avg uplift</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for promo in promos | reverse %}
+          {% set confirmed_entries = [] %}{% set suspect_entries = [] %}{% set uplift_vals = [] %}
+          {% for e in promo.entries %}
+            {% set st = e.override or e.auto_status %}
+            {% if st == 'confirmed' %}{% set _ = confirmed_entries.append(e) %}{% endif %}
+            {% if st in ['suspect','not_executed','no_data'] %}{% set _ = suspect_entries.append(e) %}{% endif %}
+            {% if e.uplift_pct is not none and st == 'confirmed' %}{% set _ = uplift_vals.append(e.uplift_pct) %}{% endif %}
+          {% endfor %}
+          <tr>
+            <td>
+              <a href="/promo/{{ promo.id }}" style="font-weight:700;color:var(--ink);">{{ promo.name }}</a>
+              <div class="muted mono" style="margin-top:2px;">{{ promo.filename }}</div>
+            </td>
+            <td class="muted">{{ promo.uploaded_at[:16].replace("T"," ") }}</td>
+            <td>{{ promo.sku_count }}</td>
+            <td>{% if confirmed_entries %}<span class="badge b-green">{{ confirmed_entries | length }}</span>{% else %}—{% endif %}</td>
+            <td>{% if suspect_entries %}<span class="badge b-amber">{{ suspect_entries | length }}</span>{% else %}—{% endif %}</td>
+            <td>
+              {% if uplift_vals %}
+                {% set avg = (uplift_vals | sum / uplift_vals | length) | round(1) %}
+                <span class="badge {% if avg >= 20 %}b-green{% elif avg >= 0 %}b-amber{% else %}b-red{% endif %}">
+                  {% if avg > 0 %}+{% endif %}{{ avg }}%
+                </span>
+              {% else %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td class="text-right"><a href="/promo/{{ promo.id }}" class="btn btn-sm">View →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="muted" style="padding:28px 0;text-align:center;">No promos uploaded yet.</div>
+      {% endif %}
+    </div>
+
+  </div><!-- end .content -->
+</div><!-- end .main -->
+
+<div class="page-credit">Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
+
+</body>
+</html>

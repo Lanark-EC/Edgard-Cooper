@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ promo.name }} — E&C Script Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal:#3BBFBF;--teal-dark:#2A9595;--teal-deeper:#1E7070;--teal-sb:#1A6060;
+  --teal-light:#E3F7F7;--teal-mid:#A8E0E0;
+  --cream:#FAF8F4;--cream-dark:#F0EDE6;--white:#FFFFFF;
+  --ink:#1A2B2B;--ink-soft:#2D4040;--muted:#5E7F7F;--muted-light:#9BBEBE;
+  --border:#D0EAEA;--border-mid:#A8D8D8;
+  --sb-w:272px;--r:14px;--rs:9px;
+}
+body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--ink);display:flex;min-height:100vh;font-size:14px;}
+.sidebar{width:var(--sb-w);background:var(--teal-sb);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sb-brand{background:var(--teal-deeper);padding:20px 0 20px;position:relative;overflow:hidden;}
+.sb-top{display:flex;justify-content:center;align-items:center;width:100%;}
+.sb-top img{width:170px;display:block;margin:0 auto;}
+.sb-nav{flex:1;padding:16px 11px;}
+.nav-lbl{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,0.27);padding:0 8px;margin-bottom:6px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.58);font-size:13px;font-weight:700;transition:all .15s;margin-bottom:3px;border:none;background:transparent;width:100%;text-align:left;font-family:'Nunito',sans-serif;text-decoration:none;}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.88);}
+.nav-item.active{background:var(--teal);color:#fff;box-shadow:0 3px 12px rgba(59,191,191,.35);}
+.nav-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(255,255,255,0.08);}
+.nav-item.active .nav-icon{background:rgba(255,255,255,0.18);}
+.nav-badge{margin-left:auto;font-size:9.5px;font-weight:700;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.36);padding:2px 7px;border-radius:20px;}
+.nav-item.active .nav-badge{background:rgba(255,255,255,0.18);color:rgba(255,255,255,0.8);}
+.nav-sec{margin-bottom:20px;}
+.sb-footer{padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-credit{text-align:center;font-size:10px;color:rgba(255,255,255,0.2);line-height:1.6;}
+.sb-credit a{color:rgba(255,255,255,0.38);text-decoration:none;font-weight:700;}
+.main{margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 34px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.tp-left{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+.tp-pill{background:var(--teal-light);color:var(--teal-deeper);font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px;}
+.tp-crumb{color:var(--muted);font-weight:500;}
+.tp-crumb strong{color:var(--ink);font-weight:700;}
+.tp-lanark-logo{display:flex;align-items:center;text-decoration:none;opacity:.85;transition:opacity .15s;}
+.tp-lanark-logo:hover{opacity:1;}
+.content{padding:28px 34px;width:100%;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:14px;flex-wrap:wrap;}
+.page-back{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.page-back a{color:var(--teal-dark);text-decoration:none;font-weight:600;}
+.page-back a:hover{text-decoration:underline;}
+.page-title{font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;color:var(--ink);}
+.page-sub{font-size:12.5px;color:var(--muted);margin-top:3px;}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px;margin-bottom:20px;}
+.metric{background:var(--white);border:1px solid var(--border);border-radius:var(--rs);padding:13px 15px;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.metric-val{font-family:'Nunito',sans-serif;font-size:22px;font-weight:800;color:var(--ink);}
+.metric-lbl{font-size:11px;color:var(--muted);margin-top:3px;font-weight:500;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,0.04);}
+.card-title{font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+.alert{padding:11px 15px;border-radius:8px;font-size:13px;margin-bottom:14px;font-weight:500;}
+.alert-success{background:var(--teal-light);color:var(--teal-deeper);border:1px solid var(--teal-mid);}
+.alert-error{background:#FDECEA;color:#C0392B;border:1px solid #F5C6C2;}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
+.b-green{background:#E6F7EE;color:#1A6840;}
+.b-amber{background:#FEF3E2;color:#7A5010;}
+.b-red{background:#FDECEA;color:#C0392B;}
+.b-gray{background:var(--cream-dark);color:var(--muted);}
+.b-blue{background:var(--teal-light);color:var(--teal-deeper);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:9px 11px;border-bottom:1.5px solid var(--border);text-align:left;white-space:nowrap;}
+td{padding:9px 11px;border-bottom:1px solid var(--cream-dark);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:#F5FAFA;}
+.btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:8px 16px;border:1.5px solid var(--border-mid);border-radius:8px;background:var(--white);color:var(--ink);cursor:pointer;transition:all .15s;font-family:'Nunito',sans-serif;text-decoration:none;}
+.btn:hover{background:var(--cream);border-color:var(--teal);}
+.btn-danger{color:#C0392B;border-color:#F5C6C2;}
+.btn-danger:hover{background:#FDECEA;}
+.btn-sm{font-size:12px;padding:5px 12px;}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
+input[type=text],select{font-size:13px;padding:7px 10px;border:1.5px solid var(--border-mid);border-radius:8px;background:var(--white);color:var(--ink);font-family:'Nunito Sans',sans-serif;}
+input[type=text]:focus,select:focus{outline:none;border-color:var(--teal);}
+.filters{display:flex;gap:10px;align-items:center;margin-bottom:13px;flex-wrap:wrap;}
+.muted{color:var(--muted);}
+.mono{font-family:monospace;font-size:12px;}
+.text-right{text-align:right;}
+select.ovr{font-size:11px;padding:3px 7px;width:auto;border-radius:6px;border:1px solid var(--border-mid);}
+.week-detail{display:none;margin-top:6px;}
+.page-credit{position:fixed;bottom:16px;right:20px;font-size:11px;color:var(--muted-light);font-weight:500;z-index:200;}
+.page-credit a{color:#4A7CC7;text-decoration:none;font-weight:700;}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-top">
+      <img src="{{ url_for('static', filename='EC_transparent.png') }}" alt="Edgard & Cooper" onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="nav-sec">
+      <div class="nav-lbl">Scripts</div>
+      <a class="nav-item" href="/"><div class="nav-icon">🚀</div>Launch Check<span class="nav-badge">Excel</span></a>
+      <a class="nav-item" href="/"><div class="nav-icon">📊</div>Garvis Export<span class="nav-badge">Excel</span></a>
+      <a class="nav-item active" href="/promo-uplift"><div class="nav-icon">📈</div>Promo Uplift<span class="nav-badge">New</span></a>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Coming soon</div>
+      <a class="nav-item" style="opacity:.36;pointer-events:none;"><div class="nav-icon">📧</div>Email Reports<span class="nav-badge">Soon</span></a>
+      <a class="nav-item" style="opacity:.36;pointer-events:none;"><div class="nav-icon">🧹</div>Data Cleaning<span class="nav-badge">Soon</span></a>
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-credit">Edgard &amp; Cooper &middot; Internal use only<br>Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="tp-left">
+      <div class="tp-pill">E&amp;C Internal</div>
+      <div class="tp-crumb">Script Hub &rsaquo; <a href="/promo-uplift" style="color:var(--muted);text-decoration:none;">Promo Uplift</a> &rsaquo; <strong>{{ promo.name }}</strong></div>
+    </div>
+    <a href="https://lanark.be" target="_blank" class="tp-lanark-logo">
+      <div style="display:flex;flex-direction:column;line-height:1.2;">
+        <span style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:800;letter-spacing:2px;color:#1B4F9B;">LANARK</span>
+        <span style="font-family:Arial,Helvetica,sans-serif;font-size:7px;font-weight:500;letter-spacing:0.8px;color:#4A7CC7;white-space:nowrap;">DIGITAL SUPPLY CHAIN ENGINEERS</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="content">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat == 'success' else 'error' }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <div class="page-back"><a href="/promo-uplift">← Promo Uplift</a></div>
+        <div class="page-title">{{ promo.name }}</div>
+        <div class="page-sub">{{ promo.filename }} &bull; Uploaded {{ promo.uploaded_at[:16].replace("T"," ") }}</div>
+      </div>
+      <form method="POST" action="/promo/{{ promo.id }}/delete" onsubmit="return confirm('Delete this promo?')">
+        <button type="submit" class="btn btn-danger btn-sm">Delete promo</button>
+      </form>
+    </div>
+
+    {% set all_entries = promo.entries %}
+    {% set confirmed_list = [] %}{% set suspect_list = [] %}{% set uplift_vals = [] %}
+    {% for e in all_entries %}
+      {% set st = e.override or e.auto_status %}
+      {% if st == 'confirmed' %}{% set _ = confirmed_list.append(e) %}{% endif %}
+      {% if st in ['suspect','not_executed','no_data'] %}{% set _ = suspect_list.append(e) %}{% endif %}
+      {% if e.uplift_pct is not none and st == 'confirmed' %}{% set _ = uplift_vals.append(e.uplift_pct) %}{% endif %}
+    {% endfor %}
+
+    <!-- KPIs -->
+    <div class="metrics">
+      <div class="metric"><div class="metric-val">{{ all_entries | length }}</div><div class="metric-lbl">SKUs in promo</div></div>
+      <div class="metric"><div class="metric-val">{{ confirmed_list | length }}</div><div class="metric-lbl">Confirmed</div></div>
+      <div class="metric"><div class="metric-val">{{ suspect_list | length }}</div><div class="metric-lbl">Suspect / not executed</div></div>
+      <div class="metric">
+        <div class="metric-val">
+          {% if uplift_vals %}{% set avg = (uplift_vals | sum / uplift_vals | length) | round(1) %}{% if avg > 0 %}+{% endif %}{{ avg }}%
+          {% else %}—{% endif %}
+        </div>
+        <div class="metric-lbl">Avg uplift (confirmed)</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val">
+          {% set tu = namespace(val=0) %}
+          {% for e in confirmed_list %}{% if e.uplift_units is not none %}{% set tu.val = tu.val + e.uplift_units %}{% endif %}{% endfor %}
+          {{ "{:,.0f}".format(tu.val) }}
+        </div>
+        <div class="metric-lbl">Total uplift units</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <select id="f-chain" onchange="filterTable()">
+        <option value="">All chains</option>
+        {% for chain in all_entries | map(attribute='chain') | unique | sort %}<option>{{ chain }}</option>{% endfor %}
+      </select>
+      <select id="f-country" onchange="filterTable()">
+        <option value="">All countries</option>
+        {% for c in all_entries | map(attribute='country') | unique | sort %}<option>{{ c }}</option>{% endfor %}
+      </select>
+      <select id="f-status" onchange="filterTable()">
+        <option value="">All statuses</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="suspect">Suspect</option>
+        <option value="not_executed">Not executed</option>
+        <option value="no_data">No data</option>
+      </select>
+      <span id="row-count" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+    </div>
+
+    <!-- Main table -->
+    <div class="card" style="padding:0;overflow-x:auto;">
+    <table id="main-table">
+      <thead>
+        <tr>
+          <th>SAP</th><th>Description</th><th>Chain</th><th>Country</th>
+          <th>Weeks</th><th>Promo units</th><th>Baseline forecast</th>
+          <th>Actual sales</th><th>Uplift units</th><th>Uplift %</th>
+          <th>Status</th><th>Override</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for e in all_entries %}
+      {% set eff_status = e.override or e.auto_status %}
+      <tr data-chain="{{ e.chain }}" data-country="{{ e.country }}" data-status="{{ eff_status }}">
+        <td class="mono">{{ e.sap }}</td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ e.desc }}">{{ e.desc }}</td>
+        <td>{{ e.chain }}</td>
+        <td>{{ e.country }}</td>
+        <td>
+          <span style="font-size:12px;color:var(--ink-soft);">
+            {% if e.weeks %}{{ e.weeks[0].label }}{% if e.weeks|length > 1 %} – {{ e.weeks[-1].label }}{% endif %} <span class="muted">({{ e.weeks|length }}w)</span>{% endif %}
+          </span>
+          <a href="#" class="muted" style="font-size:11px;display:block;margin-top:2px;" onclick="toggleWeeks(this);return false;">show weeks ▾</a>
+          <div class="week-detail">
+            <table style="font-size:11px;width:auto;min-width:240px;margin-top:4px;">
+              <thead><tr><th style="padding:3px 6px;">Week</th><th style="padding:3px 6px;">Registered</th><th style="padding:3px 6px;">Forecast</th><th style="padding:3px 6px;">Actual</th></tr></thead>
+              <tbody>
+              {% for w in e.weeks %}
+              <tr>
+                <td style="padding:3px 6px;" class="mono">{{ w.label }}</td>
+                <td style="padding:3px 6px;">{{ "{:,.0f}".format(w.promo_units) }}</td>
+                <td style="padding:3px 6px;">{% if w.forecast is not none %}{{ "{:,.0f}".format(w.forecast) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                <td style="padding:3px 6px;">{% if w.actual is not none %}{{ "{:,.0f}".format(w.actual) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td>{{ "{:,.0f}".format(e.total_promo_units) }}</td>
+        <td>
+          {% if e.total_forecast %}{{ "{:,.0f}".format(e.total_forecast) }}{% else %}<span class="muted">—</span>{% endif %}
+          {% if e.missing_fc > 0 %}<span class="badge b-amber" style="margin-left:4px;" title="{{ e.missing_fc }} weeks missing">!{{ e.missing_fc }}</span>{% endif %}
+        </td>
+        <td>
+          {% if e.total_actual %}{{ "{:,.0f}".format(e.total_actual) }}{% else %}<span class="muted">—</span>{% endif %}
+          {% if e.missing_act > 0 %}<span class="badge b-amber" style="margin-left:4px;" title="{{ e.missing_act }} weeks missing">!{{ e.missing_act }}</span>{% endif %}
+        </td>
+        <td style="font-weight:700;">
+          {% if e.uplift_units is not none %}
+            <span style="color:{% if e.uplift_units >= 0 %}#1A6840{% else %}#C0392B{% endif %};">
+              {% if e.uplift_units > 0 %}+{% endif %}{{ "{:,.0f}".format(e.uplift_units) }}
+            </span>
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+        <td>
+          {% if e.uplift_pct is not none %}
+            <span class="badge {% if e.uplift_pct >= 20 %}b-green{% elif e.uplift_pct >= 0 %}b-amber{% else %}b-red{% endif %}">
+              {% if e.uplift_pct > 0 %}+{% endif %}{{ e.uplift_pct }}%
+            </span>
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+        <td>
+          {% if eff_status == 'confirmed' %}<span class="badge b-green">Confirmed</span>
+          {% elif eff_status == 'not_executed' %}<span class="badge b-red">Not executed</span>
+          {% elif eff_status == 'suspect' %}<span class="badge b-amber">Suspect</span>
+          {% else %}<span class="badge b-gray">No data</span>{% endif %}
+          {% if e.override %}<span class="badge b-blue" style="margin-left:3px;">manual</span>{% endif %}
+        </td>
+        <td>
+          <select class="ovr" onchange="setOverride('{{ e.sap }}','{{ e.chain }}','{{ e.country }}',this.value,this)">
+            <option value="" {% if not e.override %}selected{% endif %}>Auto</option>
+            <option value="confirmed" {% if e.override=='confirmed' %}selected{% endif %}>Confirmed</option>
+            <option value="not_executed" {% if e.override=='not_executed' %}selected{% endif %}>Not executed</option>
+            <option value="suspect" {% if e.override=='suspect' %}selected{% endif %}>Suspect</option>
+          </select>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    <!-- Pre-fill lookup -->
+    <div class="card">
+      <div class="card-title">Historical uplift lookup</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;">
+        <div><label class="form-label">Chain</label><input type="text" id="pf-chain" placeholder="e.g. Arcaplanet"></div>
+        <div><label class="form-label">SAP code</label><input type="text" id="pf-sap" placeholder="e.g. 1000071"></div>
+        <div><label class="form-label">Country</label><input type="text" id="pf-country" placeholder="e.g. IT"></div>
+        <button class="btn" onclick="lookupPrefill()">Look up</button>
+      </div>
+      <div id="pf-result" style="margin-top:14px;"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="page-credit">Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
+
+<script>
+const PROMO_ID = "{{ promo.id }}";
+
+function filterTable() {
+  const chain = document.getElementById('f-chain').value;
+  const country = document.getElementById('f-country').value;
+  const status = document.getElementById('f-status').value;
+  const rows = document.querySelectorAll('#main-table tbody tr');
+  let visible = 0;
+  rows.forEach(row => {
+    const match = (!chain || row.dataset.chain === chain) &&
+                  (!country || row.dataset.country === country) &&
+                  (!status || row.dataset.status === status);
+    row.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('row-count').textContent = visible + ' of ' + rows.length + ' SKUs';
+}
+
+function toggleWeeks(link) {
+  const detail = link.previousElementSibling;
+  detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+  link.textContent = detail.style.display === 'none' ? 'show weeks ▾' : 'hide weeks ▴';
+}
+
+function setOverride(sap, chain, country, value, sel) {
+  fetch(`/promo/${PROMO_ID}/override`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({sap, chain, country, status: value || null})
+  }).then(r => r.json()).then(() => {
+    const row = sel.closest('tr');
+    row.dataset.status = value || row.dataset.originalStatus;
+    const statusCell = row.querySelectorAll('td')[10];
+    const labels = {confirmed:'Confirmed',not_executed:'Not executed',suspect:'Suspect',no_data:'No data'};
+    const classes = {confirmed:'b-green',not_executed:'b-red',suspect:'b-amber',no_data:'b-gray'};
+    const eff = value || row.dataset.originalStatus || 'suspect';
+    statusCell.innerHTML = `<span class="badge ${classes[eff]||'b-gray'}">${labels[eff]||eff}</span>${value?'<span class="badge b-blue" style="margin-left:3px;">manual</span>':''}`;
+    filterTable();
+  });
+}
+
+document.querySelectorAll('#main-table tbody tr').forEach(row => { row.dataset.originalStatus = row.dataset.status; });
+filterTable();
+
+function lookupPrefill() {
+  const chain = document.getElementById('pf-chain').value.trim();
+  const sap   = document.getElementById('pf-sap').value.trim();
+  const country = document.getElementById('pf-country').value.trim();
+  const res = document.getElementById('pf-result');
+  if (!chain && !sap && !country) { res.innerHTML = '<span class="muted">Enter at least one filter.</span>'; return; }
+  res.innerHTML = '<span class="muted">Looking up...</span>';
+  const params = new URLSearchParams();
+  if (chain) params.append('chain', chain);
+  if (sap) params.append('sap', sap);
+  if (country) params.append('country', country);
+  fetch('/api/prefill?' + params)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.found) { res.innerHTML = '<span class="muted">No confirmed historical promos found.</span>'; return; }
+      const badge = d.avg >= 20 ? 'b-green' : d.avg >= 0 ? 'b-amber' : 'b-red';
+      const sign = d.avg > 0 ? '+' : '';
+      res.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;">
+          <div class="metric"><div class="metric-val"><span class="badge ${badge}" style="font-size:15px;">${sign}${d.avg}%</span></div><div class="metric-lbl">Recommended uplift</div></div>
+          <div class="metric"><div class="metric-val">${d.max}%</div><div class="metric-lbl">Best promo</div></div>
+          <div class="metric"><div class="metric-val">${d.min}%</div><div class="metric-lbl">Lowest confirmed</div></div>
+          <div class="metric"><div class="metric-val">${d.count}</div><div class="metric-lbl">Data points</div></div>
+        </div>
+        <table style="font-size:12px;width:auto;">
+          <thead><tr><th>Promo</th><th>Uplift %</th></tr></thead>
+          <tbody>${d.history.map(h=>`<tr><td style="padding:4px 10px;">${h.promo}</td><td style="padding:4px 10px;"><span class="badge ${h.uplift_pct>=20?'b-green':h.uplift_pct>=0?'b-amber':'b-red'}">${h.uplift_pct>0?'+':''}${h.uplift_pct}%</span></td></tr>`).join('')}</tbody>
+        </table>`;
+    });
+}
+</script>
+</body>
+</html>
