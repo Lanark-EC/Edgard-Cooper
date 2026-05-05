@@ -128,34 +128,133 @@ def parse_baseline(filepath):
 
 def parse_promo(filepath, promo_name):
     import pandas as pd, datetime as dt
-    df_raw = pd.read_excel(filepath, sheet_name="Forecast by exact #", header=0)
-    real_headers = list(df_raw.iloc[0])
-    df = df_raw.iloc[1:].reset_index(drop=True)
-    df.columns = df_raw.columns
-    raw_cols  = list(df_raw.columns)
-    week_labels = {raw_cols[i]: str(real_headers[i]) for i in range(10, len(raw_cols))}
+
+    df_raw = pd.read_excel(filepath, sheet_name="Forecast by exact #",
+                           header=0, engine="openpyxl")
+
+    # Detect if row 0 is a real header or a meta-row
+    # Check if actual column names look like real headers already
+    col0 = str(df_raw.columns[0]).strip().lower()
+    real_header_in_row0 = col0 in ("country", "select", "chain") or col0.startswith("select")
+
+    if real_header_in_row0:
+        # Real headers are in row 0 of the data (pandas already read them as columns)
+        # BUT the column names may be garbled ("Select \x80" etc) — use row 0 values instead
+        first_row = list(df_raw.iloc[0])
+        if str(first_row[0]).strip().lower() in ("country", "chain", "ean"):
+            # Row 0 contains real headers, data starts at row 1
+            real_headers = [str(v).strip() if pd.notna(v) else "" for v in first_row]
+            df = df_raw.iloc[1:].reset_index(drop=True)
+        else:
+            # Column names ARE the headers already
+            real_headers = [str(c).strip() for c in df_raw.columns]
+            df = df_raw.reset_index(drop=True)
+    else:
+        real_headers = [str(c).strip() for c in df_raw.columns]
+        df = df_raw.reset_index(drop=True)
+
+    # Map column indices by searching real_headers
+    def find_idx(candidates):
+        for cand in candidates:
+            for i, h in enumerate(real_headers):
+                if cand.lower() == h.lower() or cand.lower() in h.lower():
+                    return i
+        return None
+
+    idx_country = find_idx(["Country"])
+    idx_chain   = find_idx(["Chain"])
+    idx_sap     = find_idx(["SAP code", "SAP", "ProductID", "product_id", "Material"])
+    idx_desc    = find_idx(["Description", "Desc", "Product"])
+    idx_subtype = find_idx(["Demand Type", "Subtype", "Type"])
+    idx_demand  = find_idx(["Detail", "Demand"])
+
+    # Week columns: anything after the last known id column that looks like a date/week
+    last_id_idx = max(i for i in [idx_country, idx_chain, idx_sap, idx_desc, idx_subtype, idx_demand] if i is not None)
+    import re
+    raw_cols = list(df_raw.columns)
+    week_col_indices = []
+    for i in range(last_id_idx + 1, len(real_headers)):
+        h = real_headers[i]
+        # Include if it looks like a week (2026-W13) or date
+        if re.match(r"\d{4}[-_]?W\d{1,2}", h, re.IGNORECASE): week_col_indices.append(i)
+        elif re.match(r"\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}", h): week_col_indices.append(i)
+        elif re.match(r"\d{4}[/\-]\d{1,2}[/\-]\d{1,2}", h): week_col_indices.append(i)
+        # Also include unnamed/blank headers that follow week columns (Excel date columns often unnamed)
+        elif not h or h.startswith("Unnamed"): week_col_indices.append(i)
+
     entries = []
     for _, row in df.iterrows():
-        country = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
-        chain   = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else ""
-        sap     = str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else ""
-        desc    = str(row.iloc[5]).strip() if pd.notna(row.iloc[5]) else ""
-        subtype = str(row.iloc[6]).strip() if pd.notna(row.iloc[6]) else ""
-        demand  = str(row.iloc[7]).strip() if pd.notna(row.iloc[7]) else ""
-        if not sap or sap == "nan":
+        def get(idx):
+            if idx is None: return ""
+            v = row.iloc[idx]
+            return str(v).strip() if pd.notna(v) else ""
+
+        country = get(idx_country)
+        chain   = get(idx_chain)
+        sap     = get(idx_sap)
+        desc    = get(idx_desc)
+        subtype = get(idx_subtype)
+        demand  = get(idx_demand)
+
+        # Clean SAP: remove decimals like "1000338.0"
+        if sap and sap not in ("", "nan"):
+            try:
+                sap = str(int(float(sap)))
+            except Exception:
+                pass
+        else:
             continue
+
         weeks = []
-        for col in raw_cols[10:]:
-            val = row[col]
-            if pd.notna(val) and float(val) != 0:
-                if isinstance(col, dt.datetime):
-                    week_date = col.date().isoformat()
-                else:
+        for wi in week_col_indices:
+            if wi >= len(row):
+                continue
+            val = row.iloc[wi]
+            if pd.isna(val):
+                continue
+            try:
+                fval = float(val)
+            except Exception:
+                continue
+            if fval == 0:
+                continue
+
+            week_label = real_headers[wi] if wi < len(real_headers) else ""
+
+            # Convert week label to a date
+            # Handles: "2026-W13", "2026W13", "W13 2026", datetime objects, DD/MM/YYYY
+            week_date = None
+            raw_col = raw_cols[wi] if wi < len(raw_cols) else None
+
+            if isinstance(raw_col, dt.datetime):
+                week_date = raw_col.date().isoformat()
+            else:
+                label = str(week_label).strip()
+                m = re.match(r"(\d{4})[-_]?W(\d{1,2})", label, re.IGNORECASE)
+                if m:
+                    year, week = int(m.group(1)), int(m.group(2))
                     try:
-                        week_date = pd.to_datetime(col).date().isoformat()
-                    except:
-                        continue
-                weeks.append({"date": week_date, "label": week_labels.get(col, ""), "units": float(val)})
+                        d = dt.datetime.strptime(f"{year}-W{week:02d}-1", "%G-W%V-%u").date()
+                        week_date = d.isoformat()
+                    except Exception:
+                        week_date = f"{year}-W{week:02d}"
+                else:
+                    # Try parsing as date string
+                    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y"):
+                        try:
+                            week_date = dt.datetime.strptime(label, fmt).date().isoformat()
+                            break
+                        except ValueError:
+                            continue
+                    if not week_date:
+                        try:
+                            week_date = pd.to_datetime(raw_col, errors="coerce").date().isoformat()
+                        except Exception:
+                            week_date = label  # fallback: use label as-is
+
+            if week_date:
+                weeks.append({"date": week_date, "label": week_label, "units": fval})
+
         if weeks:
             entries.append({"country": country, "chain": chain, "sap": sap,
                             "desc": desc, "subtype": subtype, "demand": demand, "weeks": weeks})
