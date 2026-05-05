@@ -319,6 +319,18 @@ def parse_promo(filepath, promo_name):
                             "desc": desc, "subtype": subtype, "demand": demand, "weeks": weeks})
     return entries
 
+def load_baseline():
+    """Load baseline from chunked DB storage."""
+    result = {"forecast": {}, "actuals": {}}
+    for kind, prefix in [("forecast", "baseline_forecast"), ("actuals", "baseline_actuals")]:
+        meta = db_get(f"{prefix}_chunks")
+        if not meta:
+            continue
+        for i in range(meta["count"]):
+            chunk = db_get(f"{prefix}_chunk_{i}", {})
+            result[kind].update(chunk)
+    return result
+
 def calculate_uplift(promo_entries, baseline):
     forecast, actuals, results = baseline.get("forecast", {}), baseline.get("actuals", {}), []
     for entry in promo_entries:
@@ -409,28 +421,56 @@ _job_status = {}  # job_id -> {"status": "running"|"done"|"error", "msg": "..."}
 def _process_baseline_bg(path, filename, job_id):
     """Run baseline parsing in a background thread."""
     try:
-        _job_status[job_id] = {"status": "running", "msg": "Parsing file..."}
+        _job_status[job_id] = {"status": "running", "msg": "Step 1/4: Parsing Excel file..."}
         baseline = parse_baseline(str(path))
-        save_json(KEY_BASELINE, baseline)
-        save_json(KEY_BASELINE_META, {
+
+        fc_count  = len(baseline["forecast"])
+        act_count = len(baseline["actuals"])
+        _job_status[job_id] = {"status": "running", "msg": f"Step 2/4: Saving {fc_count} forecast + {act_count} actuals rows to database..."}
+
+        # Store forecast and actuals in SEPARATE smaller chunks to avoid giant blob
+        # Split into chunks of 10,000 entries each
+        CHUNK_SIZE = 10000
+
+        def chunked_save(data_dict, prefix):
+            items    = list(data_dict.items())
+            n_chunks = (len(items) + CHUNK_SIZE - 1) // CHUNK_SIZE
+            for i in range(n_chunks):
+                chunk = dict(items[i * CHUNK_SIZE:(i + 1) * CHUNK_SIZE])
+                db_set(f"{prefix}_chunk_{i}", chunk)
+            # Store chunk count so we know how many to load
+            db_set(f"{prefix}_chunks", {"count": n_chunks, "total": len(items)})
+
+        chunked_save(baseline["forecast"], "baseline_forecast")
+        _job_status[job_id] = {"status": "running", "msg": f"Step 3/4: Saved forecast data, saving actuals..."}
+        chunked_save(baseline["actuals"], "baseline_actuals")
+
+        # Save meta
+        db_set(KEY_BASELINE_META, {
             "filename": filename,
             "uploaded_at": datetime.now().isoformat(),
-            "forecast_rows": len(baseline["forecast"]),
-            "actuals_rows":  len(baseline["actuals"]),
+            "forecast_rows": fc_count,
+            "actuals_rows":  act_count,
+            "processing": False,
         })
+
+        _job_status[job_id] = {"status": "running", "msg": "Step 4/4: Recalculating existing promos..."}
+
         # Recalculate existing promos
         db = load_json(KEY_PROMO_DB, [])
-        for promo in db:
-            updated = calculate_uplift(promo["entries"], baseline)
-            override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
-            for entry in updated:
-                entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
-            promo["entries"] = updated
-            promo["recalculated_at"] = datetime.now().isoformat()
-        save_json(KEY_PROMO_DB, db)
+        if db:
+            for promo in db:
+                updated = calculate_uplift(promo["entries"], baseline)
+                override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
+                for entry in updated:
+                    entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
+                promo["entries"] = updated
+                promo["recalculated_at"] = datetime.now().isoformat()
+            save_json(KEY_PROMO_DB, db)
+
         _job_status[job_id] = {
             "status": "done",
-            "msg": f"Baseline updated — {len(baseline['forecast'])} forecast rows, {len(baseline['actuals'])} actuals rows."
+            "msg": f"Baseline ready — {fc_count} forecast rows, {act_count} actuals rows."
         }
     except Exception as e:
         import traceback
@@ -495,7 +535,7 @@ def _process_promo_bg(path, filename, promo_name, promo_id, job_id):
             db = [p for p in db if p["id"] != promo_id]
             save_json(KEY_PROMO_DB, db)
             return
-        baseline = load_json(KEY_BASELINE, {})
+        baseline = load_baseline()
         enriched = calculate_uplift(entries, baseline)
         db = load_json(KEY_PROMO_DB, [])
         for p in db:
