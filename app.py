@@ -460,14 +460,16 @@ def calculate_uplift(promo_entries, baseline):
                 "surrounding": surrounding,
             })
 
-        uplift_units = total_actual - total_forecast if missing_act == 0 and missing_fc == 0 else None
-        uplift_pct   = round(uplift_units / total_forecast * 100, 1) if (uplift_units is not None and total_forecast > 0) else None
+        expected     = round(total_forecast + total_promo_units, 1)
+        uplift_units = round(total_actual - expected, 1) if missing_act == 0 and missing_fc == 0 else None
+        uplift_pct   = round(uplift_units / expected * 100, 1) if (uplift_units is not None and expected > 0) else None
         auto_status  = "no_data" if uplift_pct is None else ("suspect" if uplift_pct < EXECUTION_THRESHOLD else "confirmed")
         results.append({**entry, "weeks": week_details,
                         "total_promo_units": total_promo_units,
                         "total_forecast": round(total_forecast, 1),
                         "total_actual":   round(total_actual,   1),
-                        "uplift_units":   round(uplift_units,   1) if uplift_units is not None else None,
+                        "expected":       expected,
+                        "uplift_units":   uplift_units,
                         "uplift_pct":     uplift_pct, "auto_status": auto_status,
                         "override": None, "missing_fc": missing_fc, "missing_act": missing_act,
                         "active_week_override": active_week_override})
