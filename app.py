@@ -325,6 +325,37 @@ def baseline_status():
 
 
 
+def _process_promo_bg(path, filename, promo_name, promo_id, job_id):
+    """Run promo parsing in a background thread."""
+    try:
+        _job_status[job_id] = {"status": "running", "msg": "Parsing promo file..."}
+        entries = parse_promo(str(path), promo_name)
+        if not entries:
+            _job_status[job_id] = {"status": "error", "msg": "No promo data found in the file."}
+            # Remove the placeholder from db
+            db = load_json(DB_PATH, [])
+            db = [p for p in db if p["id"] != promo_id]
+            save_json(DB_PATH, db)
+            return
+        baseline = load_json(BASELINE_PATH, {})
+        enriched = calculate_uplift(entries, baseline)
+        db = load_json(DB_PATH, [])
+        for p in db:
+            if p["id"] == promo_id:
+                p["sku_count"] = len(enriched)
+                p["entries"]   = enriched
+                p["processing"] = False
+                break
+        save_json(DB_PATH, db)
+        _job_status[job_id] = {"status": "done", "msg": f"'{promo_name}' ready — {len(enriched)} SKUs.", "promo_id": promo_id}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        _job_status[job_id] = {"status": "error", "msg": f"{type(e).__name__}: {e}"}
+        db = load_json(DB_PATH, [])
+        db = [p for p in db if p["id"] != promo_id]
+        save_json(DB_PATH, db)
+
 @app.route("/upload_promo", methods=["POST"])
 def upload_promo():
     f          = request.files.get("promo_file")
@@ -334,26 +365,32 @@ def upload_promo():
         return redirect(url_for("promo_uplift"))
     if not promo_name:
         promo_name = f.filename.replace(".xlsx", "").replace("_", " ")
-    path = UPLOADS_DIR / f"promo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    path     = UPLOADS_DIR / f"promo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     f.save(path)
-    try:
-        entries  = parse_promo(str(path), promo_name)
-        if not entries:
-            flash("No promo data found in the file.", "error")
-            return redirect(url_for("promo_uplift"))
-        baseline = load_json(BASELINE_PATH, {})
-        enriched = calculate_uplift(entries, baseline)
-        db       = load_json(DB_PATH, [])
-        promo_id = f"promo_{datetime.now().strftime('%Y%m%d_%H%M%S%f')}"
-        db.append({"id": promo_id, "name": promo_name, "filename": f.filename,
-                   "uploaded_at": datetime.now().isoformat(),
-                   "sku_count": len(enriched), "entries": enriched})
-        save_json(DB_PATH, db)
-        flash(f"Promo '{promo_name}' uploaded — {len(enriched)} SKUs found.", "success")
-        return redirect(url_for("promo_detail", promo_id=promo_id))
-    except Exception as e:
-        flash(f"Error parsing promo file: {e}", "error")
-        return redirect(url_for("promo_uplift"))
+
+    # Add placeholder to DB immediately
+    promo_id = f"promo_{datetime.now().strftime('%Y%m%d_%H%M%S%f')}"
+    job_id   = f"job_{promo_id}"
+    db = load_json(DB_PATH, [])
+    db.append({"id": promo_id, "name": promo_name, "filename": f.filename,
+               "uploaded_at": datetime.now().isoformat(),
+               "sku_count": 0, "entries": [], "processing": True, "job_id": job_id})
+    save_json(DB_PATH, db)
+
+    # Start background thread
+    t = threading.Thread(target=_process_promo_bg,
+                         args=(path, f.filename, promo_name, promo_id, job_id), daemon=True)
+    t.start()
+
+    flash(f"Promo '{promo_name}' uploaded. Processing in background — refresh in a moment.", "success")
+    return redirect(url_for("promo_uplift"))
+
+@app.route("/promo_status/<job_id>")
+def promo_status(job_id):
+    job = _job_status.get(job_id, {"status": "running", "msg": "Processing..."})
+    return jsonify(job)
+
+
 
 @app.route("/promo/<promo_id>")
 def promo_detail(promo_id):

@@ -292,6 +292,7 @@ tbody tr:hover td{background:#F5FAFA;}
           <tr>
             <td>
               <a href="/promo/{{ promo.id }}" style="font-weight:700;color:var(--ink);">{{ promo.name }}</a>
+              {% if promo.get('processing') %}<span class="badge b-amber" style="margin-left:6px;">⏳ Processing</span>{% endif %}
               <div class="muted mono" style="margin-top:2px;">{{ promo.filename }}</div>
             </td>
             <td class="muted">{{ promo.uploaded_at[:16].replace("T"," ") }}</td>
@@ -318,6 +319,28 @@ tbody tr:hover td{background:#F5FAFA;}
 
   </div><!-- end .content -->
 </div><!-- end .main -->
+
+{% set processing_promos = promos | selectattr('processing', 'defined') | selectattr('processing') | list %}
+{% if processing_promos %}
+<script>
+function checkPromos() {
+  const jobs = [{% for p in processing_promos %}"{{ p.job_id }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  let pending = jobs.length;
+  jobs.forEach(jid => {
+    fetch('/promo_status/' + jid).then(r => r.json()).then(d => {
+      if (d.status !== 'running') pending--;
+      if (pending === 0) {
+        document.querySelector('.content').insertAdjacentHTML('afterbegin',
+          '<div class="alert alert-success">✅ Promo processing complete! Refreshing...</div>');
+        setTimeout(() => location.reload(), 1500);
+      }
+    });
+  });
+}
+setTimeout(checkPromos, 8000);
+setInterval(checkPromos, 12000);
+</script>
+{% endif %}
 
 <div class="page-credit">Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
 
