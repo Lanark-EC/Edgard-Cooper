@@ -211,6 +211,7 @@ select.ovr{font-size:11px;padding:3px 7px;width:auto;border-radius:6px;border:1p
           <th>SAP</th><th>Description</th><th>Chain</th><th>Country</th>
           <th>Weeks</th><th>Promo units</th><th>Baseline forecast</th>
           <th>Expected (Base+Promo)</th><th>Actual sales</th>
+          <th>Diff (Actual−Expected)</th>
           <th>Uplift units</th><th>Uplift %</th>
           <th>Status</th><th>Override</th>
         </tr>
@@ -278,6 +279,13 @@ select.ovr{font-size:11px;padding:3px 7px;width:auto;border-radius:6px;border:1p
         <td>
           {% if e.total_actual %}{{ "{:,.0f}".format(e.total_actual) }}{% else %}<span class="muted">—</span>{% endif %}
           {% if e.missing_act > 0 %}<span class="badge b-amber" style="margin-left:4px;" title="{{ e.missing_act }} weeks missing">!{{ e.missing_act }}</span>{% endif %}
+        </td>
+        <td style="font-weight:600;">
+          {% if e.diff_units is defined and e.diff_units is not none %}
+            <span style="color:{% if e.diff_units >= 0 %}#1A6840{% else %}#C0392B{% endif %};">
+              {% if e.diff_units > 0 %}+{% endif %}{{ "{:,.0f}".format(e.diff_units) }}
+            </span>
+          {% else %}<span class="muted">—</span>{% endif %}
         </td>
         <td style="font-weight:700;">
           {% if e.uplift_units is not none %}
@@ -383,7 +391,7 @@ function setOverride(sap, chain, country, value, sel) {
   }).then(r => r.json()).then(() => {
     const row = sel.closest('tr');
     row.dataset.status = value || row.dataset.originalStatus;
-    const statusCell = row.querySelectorAll('td')[11];
+    const statusCell = row.querySelectorAll('td')[12];
     const labels = {confirmed:'Confirmed',not_executed:'Not executed',suspect:'Suspect',no_data:'No data'};
     const classes = {confirmed:'b-green',not_executed:'b-red',suspect:'b-amber',no_data:'b-gray'};
     const eff = value || row.dataset.originalStatus || 'suspect';
