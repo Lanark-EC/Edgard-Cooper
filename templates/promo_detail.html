@@ -228,7 +228,7 @@ select.ovr{font-size:11px;padding:3px 7px;width:auto;border-radius:6px;border:1p
             {% if e.weeks %}{{ e.weeks[0].label }}{% if e.weeks|length > 1 %} – {{ e.weeks[-1].label }}{% endif %} <span class="muted">({{ e.weeks|length }}w)</span>{% endif %}
           </span>
           <a href="#" class="muted" style="font-size:11px;display:block;margin-top:2px;" onclick="toggleWeeks(this);return false;">show weeks ▾</a>
-          <div class="week-detail">
+          <div class="week-detail" style="display:none;margin-top:6px;">
             {% for w in e.weeks %}
             <div style="margin-bottom:10px;padding:8px;background:var(--cream);border-radius:8px;font-size:12px;">
               <div style="font-weight:700;color:var(--ink);margin-bottom:6px;">📅 {{ w.label }} — Promo units: {{ "{:,.0f}".format(w.promo_units) }}</div>
@@ -369,9 +369,11 @@ function filterTable() {
 }
 
 function toggleWeeks(link) {
-  const detail = link.previousElementSibling;
-  detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
-  link.textContent = detail.style.display === 'none' ? 'show weeks ▾' : 'hide weeks ▴';
+  const detail = link.nextElementSibling;
+  if (!detail) return;
+  const isHidden = detail.style.display === 'none' || detail.style.display === '';
+  detail.style.display = isHidden ? 'block' : 'none';
+  link.textContent = isHidden ? 'hide weeks ▴' : 'show weeks ▾';
 }
 
 function setOverride(sap, chain, country, value, sel) {
