@@ -1,37 +1,96 @@
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash
-import io, traceback, json, os, shutil
+import io, traceback, json, os
 from datetime import datetime, date
 from pathlib import Path
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 150 * 1024 * 1024  # 150MB max upload
+app.config['MAX_CONTENT_LENGTH'] = 150 * 1024 * 1024
 app.secret_key = "ec_scripthub_secret"
 
 # ─── Script Hub imports ────────────────────────────────────────
 from scripts.launch_check import run_launch_check
 from scripts.garvis_export import run_garvis_export
 
-# ─── Promo Uplift data paths ───────────────────────────────────
-DATA_DIR           = Path("data")
-BASELINE_PATH      = DATA_DIR / "baseline.json"
-BASELINE_META_PATH = DATA_DIR / "baseline_meta.json"
-DB_PATH            = DATA_DIR / "promo_db.json"
-UPLOADS_DIR        = Path("uploads")
-DATA_DIR.mkdir(exist_ok=True)
+# ─── Uploads dir (temp only) ──────────────────────────────────
+UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 EXECUTION_THRESHOLD = 20
 
-# ─── Promo helpers ─────────────────────────────────────────────
-def load_json(path, default):
-    if path.exists():
-        with open(path) as f:
-            return json.load(f)
-    return default
+# ═══════════════════════════════════════════════════════════════
+# DATABASE LAYER — PostgreSQL
+# ═══════════════════════════════════════════════════════════════
+import psycopg2
+from psycopg2.extras import Json
 
-def save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2, default=str)
+_db_conn = None
+
+def get_db():
+    global _db_conn
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise RuntimeError("DATABASE_URL environment variable not set.")
+    try:
+        if _db_conn is None or _db_conn.closed:
+            raise Exception("reconnect")
+        _db_conn.cursor().execute("SELECT 1")
+    except Exception:
+        _db_conn = psycopg2.connect(db_url, sslmode="require")
+        _db_conn.autocommit = True
+    return _db_conn
+
+def init_db():
+    conn = get_db()
+    cur  = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS kv_store (
+            key        TEXT PRIMARY KEY,
+            value      JSONB NOT NULL,
+            updated_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.close()
+
+def db_get(key, default=None):
+    try:
+        cur = get_db().cursor()
+        cur.execute("SELECT value FROM kv_store WHERE key = %s", (key,))
+        row = cur.fetchone()
+        cur.close()
+        return row[0] if row else default
+    except Exception as e:
+        print(f"db_get error: {e}")
+        return default
+
+def db_set(key, value):
+    try:
+        cur = get_db().cursor()
+        cur.execute("""
+            INSERT INTO kv_store (key, value, updated_at)
+            VALUES (%s, %s, NOW())
+            ON CONFLICT (key) DO UPDATE
+              SET value = EXCLUDED.value, updated_at = NOW()
+        """, (key, Json(value)))
+        cur.close()
+    except Exception as e:
+        print(f"db_set error: {e}")
+
+try:
+    init_db()
+    print("Database initialized.")
+except Exception as e:
+    print(f"Database init failed: {e}")
+
+# ─── Key constants ────────────────────────────────────────────
+KEY_BASELINE      = "baseline"
+KEY_BASELINE_META = "baseline_meta"
+KEY_PROMO_DB      = "promo_db"
+
+def load_json(key, default):
+    return db_get(key, default)
+
+def save_json(key, data):
+    db_set(key, data)
 
 def parse_baseline(filepath):
     import pandas as pd
@@ -333,8 +392,8 @@ def api_garvis_export():
 
 @app.route("/promo-uplift")
 def promo_uplift():
-    db            = load_json(DB_PATH, [])
-    baseline_meta = load_json(BASELINE_META_PATH, None)
+    db            = load_json(KEY_PROMO_DB, [])
+    baseline_meta = load_json(KEY_BASELINE_META, None)
     confirmed     = [p for p in db if (p.get("override") or p.get("auto_status")) == "confirmed"]
     uplift_vals   = [p["uplift_pct"] for p in confirmed if p.get("uplift_pct") is not None]
     avg_uplift    = round(sum(uplift_vals) / len(uplift_vals), 1) if uplift_vals else None
@@ -352,15 +411,15 @@ def _process_baseline_bg(path, filename, job_id):
     try:
         _job_status[job_id] = {"status": "running", "msg": "Parsing file..."}
         baseline = parse_baseline(str(path))
-        save_json(BASELINE_PATH, baseline)
-        save_json(BASELINE_META_PATH, {
+        save_json(KEY_BASELINE, baseline)
+        save_json(KEY_BASELINE_META, {
             "filename": filename,
             "uploaded_at": datetime.now().isoformat(),
             "forecast_rows": len(baseline["forecast"]),
             "actuals_rows":  len(baseline["actuals"]),
         })
         # Recalculate existing promos
-        db = load_json(DB_PATH, [])
+        db = load_json(KEY_PROMO_DB, [])
         for promo in db:
             updated = calculate_uplift(promo["entries"], baseline)
             override_map = {(e["sap"], e["chain"], e["country"]): e.get("override") for e in promo["entries"]}
@@ -368,7 +427,7 @@ def _process_baseline_bg(path, filename, job_id):
                 entry["override"] = override_map.get((entry["sap"], entry["chain"], entry["country"]))
             promo["entries"] = updated
             promo["recalculated_at"] = datetime.now().isoformat()
-        save_json(DB_PATH, db)
+        save_json(KEY_PROMO_DB, db)
         _job_status[job_id] = {
             "status": "done",
             "msg": f"Baseline updated — {len(baseline['forecast'])} forecast rows, {len(baseline['actuals'])} actuals rows."
@@ -390,7 +449,7 @@ def upload_baseline():
     # Save pending status immediately
     job_id = datetime.now().strftime('%Y%m%d_%H%M%S%f')
     _job_status[job_id] = {"status": "running", "msg": "Processing..."}
-    save_json(BASELINE_META_PATH, {
+    save_json(KEY_BASELINE_META, {
         "filename": f.filename,
         "uploaded_at": datetime.now().isoformat(),
         "forecast_rows": "processing...",
@@ -409,7 +468,7 @@ def upload_baseline():
 @app.route("/baseline_status")
 def baseline_status():
     """Poll endpoint to check background job status."""
-    meta = load_json(BASELINE_META_PATH, None)
+    meta = load_json(KEY_BASELINE_META, None)
     if not meta:
         return jsonify({"status": "none"})
     job_id = meta.get("job_id")
@@ -419,7 +478,7 @@ def baseline_status():
     if job["status"] == "done":
         # Update meta to remove processing flag
         meta["processing"] = False
-        save_json(BASELINE_META_PATH, meta)
+        save_json(KEY_BASELINE_META, meta)
     return jsonify(job)
 
 
@@ -432,28 +491,28 @@ def _process_promo_bg(path, filename, promo_name, promo_id, job_id):
         if not entries:
             _job_status[job_id] = {"status": "error", "msg": "No promo data found in the file."}
             # Remove the placeholder from db
-            db = load_json(DB_PATH, [])
+            db = load_json(KEY_PROMO_DB, [])
             db = [p for p in db if p["id"] != promo_id]
-            save_json(DB_PATH, db)
+            save_json(KEY_PROMO_DB, db)
             return
-        baseline = load_json(BASELINE_PATH, {})
+        baseline = load_json(KEY_BASELINE, {})
         enriched = calculate_uplift(entries, baseline)
-        db = load_json(DB_PATH, [])
+        db = load_json(KEY_PROMO_DB, [])
         for p in db:
             if p["id"] == promo_id:
                 p["sku_count"] = len(enriched)
                 p["entries"]   = enriched
                 p["processing"] = False
                 break
-        save_json(DB_PATH, db)
+        save_json(KEY_PROMO_DB, db)
         _job_status[job_id] = {"status": "done", "msg": f"'{promo_name}' ready — {len(enriched)} SKUs.", "promo_id": promo_id}
     except Exception as e:
         import traceback
         traceback.print_exc()
         _job_status[job_id] = {"status": "error", "msg": f"{type(e).__name__}: {e}"}
-        db = load_json(DB_PATH, [])
+        db = load_json(KEY_PROMO_DB, [])
         db = [p for p in db if p["id"] != promo_id]
-        save_json(DB_PATH, db)
+        save_json(KEY_PROMO_DB, db)
 
 @app.route("/upload_promo", methods=["POST"])
 def upload_promo():
@@ -470,11 +529,11 @@ def upload_promo():
     # Add placeholder to DB immediately
     promo_id = f"promo_{datetime.now().strftime('%Y%m%d_%H%M%S%f')}"
     job_id   = f"job_{promo_id}"
-    db = load_json(DB_PATH, [])
+    db = load_json(KEY_PROMO_DB, [])
     db.append({"id": promo_id, "name": promo_name, "filename": f.filename,
                "uploaded_at": datetime.now().isoformat(),
                "sku_count": 0, "entries": [], "processing": True, "job_id": job_id})
-    save_json(DB_PATH, db)
+    save_json(KEY_PROMO_DB, db)
 
     # Start background thread
     t = threading.Thread(target=_process_promo_bg,
@@ -493,7 +552,7 @@ def promo_status(job_id):
 
 @app.route("/promo/<promo_id>")
 def promo_detail(promo_id):
-    db    = load_json(DB_PATH, [])
+    db    = load_json(KEY_PROMO_DB, [])
     promo = next((p for p in db if p["id"] == promo_id), None)
     if not promo:
         flash("Promo not found.", "error")
@@ -504,7 +563,7 @@ def promo_detail(promo_id):
 def set_override(promo_id):
     data    = request.get_json()
     sap, chain, country, status = data.get("sap"), data.get("chain"), data.get("country"), data.get("status")
-    db      = load_json(DB_PATH, [])
+    db      = load_json(KEY_PROMO_DB, [])
     promo   = next((p for p in db if p["id"] == promo_id), None)
     if not promo:
         return jsonify({"error": "not found"}), 404
@@ -512,21 +571,21 @@ def set_override(promo_id):
         if entry["sap"] == sap and entry["chain"] == chain and entry["country"] == country:
             entry["override"] = status or None
             break
-    save_json(DB_PATH, db)
+    save_json(KEY_PROMO_DB, db)
     return jsonify({"ok": True})
 
 @app.route("/promo/<promo_id>/delete", methods=["POST"])
 def delete_promo(promo_id):
-    db = load_json(DB_PATH, [])
+    db = load_json(KEY_PROMO_DB, [])
     db = [p for p in db if p["id"] != promo_id]
-    save_json(DB_PATH, db)
+    save_json(KEY_PROMO_DB, db)
     flash("Promo deleted.", "success")
     return redirect(url_for("promo_uplift"))
 
 @app.route("/api/prefill")
 def prefill():
     chain, sap, country = request.args.get("chain",""), request.args.get("sap",""), request.args.get("country","")
-    db, matches = load_json(DB_PATH, []), []
+    db, matches = load_json(KEY_PROMO_DB, []), []
     for promo in db:
         for entry in promo["entries"]:
             if (entry.get("override") or entry.get("auto_status")) != "confirmed": continue
