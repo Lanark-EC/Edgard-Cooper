@@ -204,13 +204,39 @@ tbody tr:hover td{background:#F5FAFA;}
       <div class="card">
         <div class="card-title">Baseline — clean forecast snapshot</div>
         {% if baseline_meta %}
+        {% if baseline_meta.get('processing') %}
+        <div class="baseline-active" style="background:#FEF9EC;border-color:#F0D890;">
+          <div class="bl-name" style="color:#7A5010;">⏳ Processing: {{ baseline_meta.filename }}</div>
+          <div class="muted" style="font-size:12px;">Uploaded {{ baseline_meta.uploaded_at[:16].replace("T"," ") }} — parsing large file in background...</div>
+          <div id="processing-status" style="font-size:12px;color:#7A5010;margin-top:6px;font-weight:600;"></div>
+        </div>
+        <script>
+        function pollStatus() {
+          fetch('/baseline_status').then(r=>r.json()).then(d=>{
+            const el = document.getElementById('processing-status');
+            if (d.status === 'done') {
+              el.textContent = '✅ Done! Refreshing...';
+              setTimeout(() => location.reload(), 1500);
+            } else if (d.status === 'error') {
+              el.textContent = '❌ Error: ' + d.msg;
+              el.style.color = '#C0392B';
+            } else {
+              el.textContent = '⏳ Still processing... (refreshing in 10s)';
+              setTimeout(pollStatus, 10000);
+            }
+          }).catch(() => setTimeout(pollStatus, 10000));
+        }
+        setTimeout(pollStatus, 5000);
+        </script>
+        {% else %}
         <div class="baseline-active">
-          <div class="bl-name">{{ baseline_meta.filename }}</div>
+          <div class="bl-name">✅ {{ baseline_meta.filename }}</div>
           <div class="muted" style="font-size:12px;">
             Uploaded {{ baseline_meta.uploaded_at[:16].replace("T"," ") }} &bull;
             {{ baseline_meta.forecast_rows }} forecast &bull; {{ baseline_meta.actuals_rows }} actuals
           </div>
         </div>
+        {% endif %}
         {% else %}
         <div class="baseline-missing">No baseline loaded yet. Upload your workbench export below.</div>
         {% endif %}

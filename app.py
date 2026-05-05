@@ -243,21 +243,24 @@ def promo_uplift():
         promos=db, baseline_meta=baseline_meta,
         total_promos=len(db), confirmed=len(confirmed), avg_uplift=avg_uplift)
 
-@app.route("/upload_baseline", methods=["POST"])
-def upload_baseline():
-    f = request.files.get("baseline_file")
-    if not f or not f.filename:
-        flash("No file selected.", "error")
-        return redirect(url_for("promo_uplift"))
-    path = UPLOADS_DIR / "baseline_latest.xlsx"
-    f.save(path)
+import threading
+
+# Track background job status
+_job_status = {}  # job_id -> {"status": "running"|"done"|"error", "msg": "..."}
+
+def _process_baseline_bg(path, filename, job_id):
+    """Run baseline parsing in a background thread."""
     try:
+        _job_status[job_id] = {"status": "running", "msg": "Parsing file..."}
         baseline = parse_baseline(str(path))
         save_json(BASELINE_PATH, baseline)
-        save_json(BASELINE_META_PATH, {"filename": f.filename,
+        save_json(BASELINE_META_PATH, {
+            "filename": filename,
             "uploaded_at": datetime.now().isoformat(),
             "forecast_rows": len(baseline["forecast"]),
-            "actuals_rows":  len(baseline["actuals"])})
+            "actuals_rows":  len(baseline["actuals"]),
+        })
+        # Recalculate existing promos
         db = load_json(DB_PATH, [])
         for promo in db:
             updated = calculate_uplift(promo["entries"], baseline)
@@ -267,12 +270,60 @@ def upload_baseline():
             promo["entries"] = updated
             promo["recalculated_at"] = datetime.now().isoformat()
         save_json(DB_PATH, db)
-        flash(f"Baseline updated — {len(baseline['forecast'])} forecast rows, {len(baseline['actuals'])} actuals rows.", "success")
+        _job_status[job_id] = {
+            "status": "done",
+            "msg": f"Baseline updated — {len(baseline['forecast'])} forecast rows, {len(baseline['actuals'])} actuals rows."
+        }
     except Exception as e:
         import traceback
         traceback.print_exc()
-        flash(f"Error parsing baseline: {type(e).__name__}: {e}", "error")
+        _job_status[job_id] = {"status": "error", "msg": f"{type(e).__name__}: {e}"}
+
+@app.route("/upload_baseline", methods=["POST"])
+def upload_baseline():
+    f = request.files.get("baseline_file")
+    if not f or not f.filename:
+        flash("No file selected.", "error")
+        return redirect(url_for("promo_uplift"))
+    path = UPLOADS_DIR / "baseline_latest.xlsx"
+    f.save(path)
+
+    # Save pending status immediately
+    job_id = datetime.now().strftime('%Y%m%d_%H%M%S%f')
+    _job_status[job_id] = {"status": "running", "msg": "Processing..."}
+    save_json(BASELINE_META_PATH, {
+        "filename": f.filename,
+        "uploaded_at": datetime.now().isoformat(),
+        "forecast_rows": "processing...",
+        "actuals_rows": "processing...",
+        "job_id": job_id,
+        "processing": True,
+    })
+
+    # Start background thread
+    t = threading.Thread(target=_process_baseline_bg, args=(path, f.filename, job_id), daemon=True)
+    t.start()
+
+    flash(f"Baseline file '{f.filename}' uploaded. Processing in background — this may take 1–2 minutes for large files. Refresh this page to see when it's ready.", "success")
     return redirect(url_for("promo_uplift"))
+
+@app.route("/baseline_status")
+def baseline_status():
+    """Poll endpoint to check background job status."""
+    meta = load_json(BASELINE_META_PATH, None)
+    if not meta:
+        return jsonify({"status": "none"})
+    job_id = meta.get("job_id")
+    if not job_id or not meta.get("processing"):
+        return jsonify({"status": "done", "msg": "Baseline active."})
+    job = _job_status.get(job_id, {"status": "running", "msg": "Processing..."})
+    if job["status"] == "done":
+        # Update meta to remove processing flag
+        meta["processing"] = False
+        save_json(BASELINE_META_PATH, meta)
+    return jsonify(job)
+
+
 
 @app.route("/upload_promo", methods=["POST"])
 def upload_promo():
