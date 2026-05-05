@@ -45,22 +45,63 @@ def parse_baseline(filepath):
         if not sheets:
             continue
         df = pd.read_excel(filepath, sheet_name=sheets[0])
-        id_cols  = ["Chain", "ProductID", "Country"]
+
+        # Normalize column names: strip whitespace, case-insensitive matching
+        col_map = {str(c).strip().lower(): c for c in df.columns}
+
+        def find_col(candidates):
+            for c in candidates:
+                if c.lower() in col_map:
+                    return col_map[c.lower()]
+            return None
+
+        chain_col   = find_col(["Chain", "chain", "CHAIN", "customer", "Customer"])
+        prod_col    = find_col(["ProductID", "productid", "product_id", "Product ID", "SAP", "sap", "material", "Material"])
+        country_col = find_col(["Country", "country", "COUNTRY", "market", "Market"])
+
+        if not chain_col or not prod_col or not country_col:
+            # Fallback: use positional columns (first 3)
+            cols = list(df.columns)
+            chain_col   = cols[0] if len(cols) > 0 else None
+            prod_col    = cols[1] if len(cols) > 1 else None
+            country_col = cols[2] if len(cols) > 2 else None
+
+        id_cols   = [c for c in [chain_col, prod_col, country_col] if c]
         date_cols = [c for c in df.columns if c not in id_cols]
+
         for _, row in df.iterrows():
-            chain   = str(row["Chain"]).strip()
-            prod    = str(int(row["ProductID"])) if pd.notna(row["ProductID"]) else ""
-            country = str(row["Country"]).strip()
+            try:
+                chain   = str(row[chain_col]).strip()   if chain_col   else ""
+                country = str(row[country_col]).strip() if country_col else ""
+                raw_prod = row[prod_col] if prod_col else ""
+                prod = str(int(raw_prod)) if pd.notna(raw_prod) and str(raw_prod).strip() not in ("", "nan") else str(raw_prod).strip()
+            except Exception:
+                continue
+
             for col in date_cols:
                 val = row[col]
                 if pd.isna(val):
                     continue
                 try:
-                    d = datetime.strptime(str(col).strip(), "%d/%m/%Y").date()
-                except ValueError:
+                    col_str = str(col).strip()
+                    # Try multiple date formats
+                    d = None
+                    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y"):
+                        try:
+                            d = datetime.strptime(col_str, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+                    if d is None:
+                        # Try pandas date parsing
+                        d = pd.to_datetime(col, errors="coerce")
+                        if pd.isna(d):
+                            continue
+                        d = d.date()
+                    key = f"{chain}__{prod}__{country}__{d.isoformat()}"
+                    result[kind][key] = float(val)
+                except Exception:
                     continue
-                key = f"{chain}__{prod}__{country}__{d.isoformat()}"
-                result[kind][key] = float(val)
     return result
 
 def parse_promo(filepath, promo_name):
@@ -206,7 +247,9 @@ def upload_baseline():
         save_json(DB_PATH, db)
         flash(f"Baseline updated — {len(baseline['forecast'])} forecast rows, {len(baseline['actuals'])} actuals rows.", "success")
     except Exception as e:
-        flash(f"Error parsing baseline: {e}", "error")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error parsing baseline: {type(e).__name__}: {e}", "error")
     return redirect(url_for("promo_uplift"))
 
 @app.route("/upload_promo", methods=["POST"])
