@@ -638,6 +638,33 @@ def prefill():
     return jsonify({"found": True, "count": len(matches),
                     "avg": round(sum(vals)/len(vals),1), "min": min(vals), "max": max(vals), "history": matches})
 
+@app.route("/debug/lookup")
+def debug_lookup():
+    """Check if a specific chain/product/country combination exists in baseline."""
+    chain   = request.args.get("chain", "Carrefour FR")
+    prod    = request.args.get("prod", "1000338")
+    country = request.args.get("country", "France")
+    date    = request.args.get("date", "2026-03-23")
+
+    key_exact = f"{chain}__{prod}__{country}__{date}"
+
+    # Also try alternate country codes
+    baseline = load_baseline()
+    forecast = baseline.get("forecast", {})
+    actuals  = baseline.get("actuals", {})
+
+    # Search for any key containing prod
+    fc_matches  = [k for k in list(forecast.keys())[:50000] if f"__{prod}__" in k][:10]
+    act_matches = [k for k in list(actuals.keys())[:50000]  if f"__{prod}__" in k][:10]
+
+    return jsonify({
+        "key_tried": key_exact,
+        "in_forecast": key_exact in forecast,
+        "in_actuals":  key_exact in actuals,
+        "forecast_sample_keys_with_prod": fc_matches,
+        "actuals_sample_keys_with_prod":  act_matches,
+    })
+
 @app.route("/debug/clear_baseline")
 def debug_clear_baseline():
     """Reset stuck baseline processing state."""
