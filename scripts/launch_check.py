@@ -261,10 +261,13 @@ def run_launch_check(orders_file, launch_file):
     ].copy()
 
     buf = io.BytesIO()
+    # Free large intermediate dataframes before writing
+    del orders, orders_by_day, orders_with_launch_check, launch, launch_summary
+    import gc; gc.collect()
+
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         result.to_excel(writer, sheet_name="Launch_Check", index=False)
         exceptions.to_excel(writer, sheet_name="Exceptions", index=False)
-        orders_by_day.to_excel(writer, sheet_name="Orders_By_Day", index=False)
     buf.seek(0)
 
     stats = {
