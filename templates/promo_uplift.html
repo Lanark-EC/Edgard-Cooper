@@ -114,6 +114,7 @@ tbody tr:hover td{background:#F5FAFA;}
 .page-credit{position:fixed;bottom:16px;right:20px;font-size:11px;color:var(--muted-light);font-weight:500;z-index:200;}
 .page-credit a{color:#4A7CC7;text-decoration:none;font-weight:700;}
 .page-credit a:hover{color:#1B4F9B;text-decoration:underline;}
+.pet-bg{position:fixed;bottom:0;right:0;width:900px;height:750px;object-fit:contain;object-position:bottom right;pointer-events:none;z-index:0;opacity:0.45;mix-blend-mode:normal;}
 </style>
 </head>
 <body>
@@ -346,5 +347,7 @@ setInterval(checkPromos, 12000);
 
 <div class="page-credit">Built by <a href="https://lanark.be" target="_blank">Lanark</a></div>
 
+
+<img class="pet-bg" src="{{ url_for('static', filename='pets_transparent.png') }}" alt="">
 </body>
 </html>

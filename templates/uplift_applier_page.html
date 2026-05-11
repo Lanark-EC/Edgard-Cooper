@@ -112,6 +112,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--in
 .prog-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-dark));border-radius:20px;animation:prog 2s ease-in-out infinite;}
 @keyframes prog{0%{width:5%;margin-left:0}50%{width:55%;margin-left:22%}100%{width:5%;margin-left:90%}}
 .hidden{display:none!important;}
+.pet-bg{position:fixed;bottom:0;right:0;width:900px;height:750px;object-fit:contain;object-position:bottom right;pointer-events:none;z-index:0;opacity:0.45;mix-blend-mode:normal;}
 </style>
 </head>
 <body>
@@ -379,5 +380,7 @@ async function pollStatus(jobId, pct, start, end) {
   } catch(e) { /* keep polling */ }
 }
 </script>
+
+<img class="pet-bg" src="{{ url_for('static', filename='pets_transparent.png') }}" alt="">
 </body>
 </html>
