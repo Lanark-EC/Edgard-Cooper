@@ -149,15 +149,21 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     ly_subtype_col = find_col(ly, ['subtype', 'sub type'])
     ly_country_col = find_col(ly, ['country', 'market'])
-    if not ly_subtype_col or not ly_country_col:
-        raise ValueError("Subtype or Country not found in last year file.")
+    ly_chain_col   = find_col(ly, ['chain', 'customer', 'client'])
+    ly_sku_col     = find_col(ly, ['productid', 'product id', 'sku', 'material', 'ean'])
+    if not ly_country_col:
+        raise ValueError("Country not found in last year file.")
+    if not ly_chain_col:
+        raise ValueError("Chain not found in last year file.")
+    if not ly_sku_col:
+        raise ValueError("ProductID/SKU not found in last year file.")
 
     ly_promo_stripped  = [str(c).strip() for c in ly_promo_cols  if str(c).strip() in ly.columns]
     ly_normal_stripped = [str(c).strip() for c in ly_normal_cols if str(c).strip() in ly.columns]
     ly_all_wc = [c for c in ly.columns if c in set(ly_wc)]
 
     status("Calculating LY uplift factors...")
-    g_ly = [ly_subtype_col, ly_country_col]
+    g_ly = [ly_chain_col, ly_sku_col, ly_country_col]
 
     ly['_avg']   = ly[ly_all_wc].mean(axis=1) if ly_all_wc else 0
     ly['_promo'] = ly[ly_promo_stripped].mean(axis=1) if ly_promo_stripped else 0
@@ -182,14 +188,20 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     ty_subtype_col = find_col(ty_fc, ['subtype', 'sub type'])
     ty_country_col = find_col(ty_fc, ['country', 'market'])
-    if not ty_subtype_col or not ty_country_col:
-        raise ValueError("Subtype or Country not found in this year forecast.")
+    ty_chain_col   = find_col(ty_fc, ['chain', 'customer', 'client'])
+    ty_sku_col     = find_col(ty_fc, ['productid', 'product id', 'sku', 'material', 'ean'])
+    if not ty_country_col:
+        raise ValueError("Country not found in this year forecast.")
+    if not ty_chain_col:
+        raise ValueError("Chain not found in this year forecast.")
+    if not ty_sku_col:
+        raise ValueError("ProductID/SKU not found in this year forecast.")
 
     ty_promo_stripped  = [str(c).strip() for c in ty_promo_cols  if str(c).strip() in ty_fc.columns]
     ty_normal_stripped = [str(c).strip() for c in ty_normal_cols if str(c).strip() in ty_fc.columns]
 
     status("Calculating tool uplift factors...")
-    g_ty = [ty_subtype_col, ty_country_col]
+    g_ty = [ty_chain_col, ty_sku_col, ty_country_col]
 
     ty_fc['_ty_normal'] = ty_fc[ty_normal_stripped].mean(axis=1) if ty_normal_stripped else 0
     ty_fc['_ty_promo']  = ty_fc[ty_promo_stripped].mean(axis=1)  if ty_promo_stripped  else 0
@@ -206,9 +218,9 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     # ── Merge and calculate net uplift ─────────────────────────
     status("Calculating net uplift per subtype/country...")
-    merged = ty_agg.rename(columns={ty_subtype_col: '_sub', ty_country_col: '_cty'}).merge(
-        ly_agg.rename(columns={ly_subtype_col: '_sub', ly_country_col: '_cty'}),
-        on=['_sub', '_cty'], how='left'
+    merged = ty_agg.rename(columns={ty_chain_col: '_chain', ty_sku_col: '_sku', ty_country_col: '_cty'}).merge(
+        ly_agg.rename(columns={ly_chain_col: '_chain', ly_sku_col: '_sku', ly_country_col: '_cty'}),
+        on=['_chain', '_sku', '_cty'], how='left'
     )
     merged['net_uplift'] = np.where(
         (merged['tool_uplift'].fillna(0) > 0) & merged['ly_uplift'].notna(),
@@ -218,7 +230,7 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
     merged['additional_uplift'] = (merged['net_uplift'] - 1.0).clip(lower=0)
 
     uplift_map = {
-        (row['_sub'], row['_cty']): {
+        (row['_chain'], row['_sku'], row['_cty']): {
             'ly':   row['ly_uplift'],
             'tool': row['tool_uplift'],
             'net':  row['net_uplift'],
@@ -239,7 +251,7 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     rows = []
     for _, row in ty_fc.iterrows():
-        info = uplift_map.get((row['_sub'], row['_cty']), {})
+        info = uplift_map.get((row['_chain'], row['_sku'], row['_cty']), {})
         add  = info.get('add', np.nan)
         out  = {label: row[col] for label, col in ty_output_dims}
         for wc, wname in zip(ty_promo_stripped, promo_col_names):
@@ -247,16 +259,15 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
             out[wname] = round(fc_val * add) if pd.notna(add) and add > 0 else 0
         out['LY uplift']   = round(info['ly'],   3) if pd.notna(info.get('ly'))   else ''
         out['Tool uplift'] = round(info['tool'],  3) if pd.notna(info.get('tool')) else ''
-        out['Net uplift']  = round(info['net'],   3) if pd.notna(info.get('net'))  else ''
         out['Add. uplift'] = f"{round(add*100,1)}%" if pd.notna(add) else ''
         rows.append(out)
 
     output_df = pd.DataFrame(rows)
 
     # Summary
-    summary = merged[['_sub','_cty','ly_avg_weekly','ly_promo_weekly','ly_uplift',
+    summary = merged[['_chain','_sku','_cty','ly_avg_weekly','ly_promo_weekly','ly_uplift',
                        'ty_normal','ty_promo','tool_uplift','net_uplift','additional_uplift']].copy()
-    summary.columns = ['Subtype','Country','LY avg weekly','LY promo weekly','LY uplift factor',
+    summary.columns = ['Chain','SKU','Country','LY avg weekly','LY promo weekly','LY uplift factor',
                         'TY avg weekly forecast','TY promo weekly forecast','Tool uplift factor',
                         'Net uplift factor','Additional uplift']
     summary['Additional uplift'] = summary['Additional uplift'].apply(
@@ -293,7 +304,7 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
     stats = {
         'promo_weeks':   len(ty_promo_stripped),
         'sku_count':     len(output_df),
-        'subtypes':      int(summary['Subtype'].nunique()),
+        'skus':          int(summary['SKU'].nunique()),
         'countries':     int(summary['Country'].nunique()),
         'avg_ly_uplift': round(float(summary['LY uplift factor'].replace('',np.nan).dropna().astype(float).mean()), 2)
                          if summary['LY uplift factor'].replace('',np.nan).dropna().any() else None,
