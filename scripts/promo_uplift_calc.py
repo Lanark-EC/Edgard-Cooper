@@ -218,10 +218,12 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     # ── Merge and calculate net uplift ─────────────────────────
     status("Calculating net uplift per subtype/country...")
-    merged = ty_agg.rename(columns={ty_chain_col: '_chain', ty_sku_col: '_sku', ty_country_col: '_cty'}).merge(
-        ly_agg.rename(columns={ly_chain_col: '_chain', ly_sku_col: '_sku', ly_country_col: '_cty'}),
-        on=['_chain', '_sku', '_cty'], how='left'
-    )
+    # Rename before merge to avoid KeyError
+    ty_agg = ty_agg.rename(columns={
+        ty_chain_col: '_chain', ty_sku_col: '_sku', ty_country_col: '_cty'})
+    ly_agg = ly_agg.rename(columns={
+        ly_chain_col: '_chain', ly_sku_col: '_sku', ly_country_col: '_cty'})
+    merged = ty_agg.merge(ly_agg, on=['_chain', '_sku', '_cty'], how='left')
     merged['net_uplift'] = np.where(
         (merged['tool_uplift'].fillna(0) > 0) & merged['ly_uplift'].notna(),
         merged['ly_uplift'] / merged['tool_uplift'],
@@ -233,7 +235,6 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
         (row['_chain'], row['_sku'], row['_cty']): {
             'ly':   row['ly_uplift'],
             'tool': row['tool_uplift'],
-            'net':  row['net_uplift'],
             'add':  row['additional_uplift'],
         }
         for _, row in merged.iterrows()
@@ -251,7 +252,7 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     rows = []
     for _, row in ty_fc.iterrows():
-        info = uplift_map.get((row['_chain'], row['_sku'], row['_cty']), {})
+        info = uplift_map.get((str(row.get(ty_chain_col,'')).strip(), str(row.get(ty_sku_col,'')).strip(), str(row.get(ty_country_col,'')).strip()), {})
         add  = info.get('add', np.nan)
         out  = {label: row[col] for label, col in ty_output_dims}
         for wc, wname in zip(ty_promo_stripped, promo_col_names):
@@ -266,10 +267,10 @@ def run_promo_uplift(ly_file, ty_file, promo_start, promo_end, status_cb=None):
 
     # Summary
     summary = merged[['_chain','_sku','_cty','ly_avg_weekly','ly_promo_weekly','ly_uplift',
-                       'ty_normal','ty_promo','tool_uplift','net_uplift','additional_uplift']].copy()
+                       'ty_normal','ty_promo','tool_uplift','additional_uplift']].copy()
     summary.columns = ['Chain','SKU','Country','LY avg weekly','LY promo weekly','LY uplift factor',
                         'TY avg weekly forecast','TY promo weekly forecast','Tool uplift factor',
-                        'Net uplift factor','Additional uplift']
+                        'Additional uplift']
     summary['Additional uplift'] = summary['Additional uplift'].apply(
         lambda x: f"{round(x*100,1)}%" if pd.notna(x) else '')
 
