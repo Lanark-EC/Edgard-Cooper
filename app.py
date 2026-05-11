@@ -988,34 +988,17 @@ def debug_job(job_id):
 
 @app.route("/debug/meta")
 def debug_meta():
+    # Only fetch lightweight metadata - never load chunks
     fc_meta  = db_get("baseline_forecast_chunks")
     act_meta = db_get("baseline_actuals_chunks")
-
-    # Spot-check: look for Carrefour FR__1000338__FR__2026-03-23 across all chunks
-    test_key = "Carrefour FR__1000338__FR__2026-03-23"
-    found_in_fc  = False
-    found_in_act = False
-    if fc_meta:
-        for i in range(fc_meta["count"]):
-            chunk = db_get(f"baseline_forecast_chunk_{i}", {})
-            if test_key in chunk:
-                found_in_fc = chunk[test_key]
-                break
-    if act_meta:
-        for i in range(act_meta["count"]):
-            chunk = db_get(f"baseline_actuals_chunk_{i}", {})
-            if test_key in chunk:
-                found_in_act = chunk[test_key]
-                break
+    meta     = db_get(KEY_BASELINE_META)
+    promo_db = db_get(KEY_PROMO_DB, [])
 
     return jsonify({
-        "baseline_meta":    db_get(KEY_BASELINE_META),
-        "promo_db_count":   len(db_get(KEY_PROMO_DB, [])),
-        "forecast_chunks":  fc_meta,
-        "actuals_chunks":   act_meta,
-        "spot_check_key":   test_key,
-        "found_in_forecast": found_in_fc,
-        "found_in_actuals":  found_in_act,
+        "baseline_meta":   meta,
+        "promo_db_count":  len(promo_db),
+        "forecast_chunks": fc_meta,
+        "actuals_chunks":  act_meta,
     })
 
 if __name__ == "__main__":
